@@ -1699,7 +1699,79 @@ cribratge de la promoció; proves e2e al dia amb la pantalla nova.
 
 ---
 
-### Experiment programat, pendent d'executar: Challenger 1M ⏸️ (2026-08-28)
+### La corba de nodes, tancada: Challenger 1M ✅ Tancat sense promoció (2026-08-28)
+
+El pas següent de la corba de nodes, programat aquí i **executat per l'usuari
+al seu ordinador**.
+
+- [x] `challenger-1m` al catàleg: nivell expert, `maxNodes` 1.000.000 (el
+      doble del Campió).
+- [x] Executat per l'usuari: 1.000 partides aparellades, llavor base 42
+      (325 s a la seva màquina). Va anar directe a la confirmació sense
+      cribratge previ — acceptable perquè no hi havia hagut selecció que
+      pogués esbiaixar, i amb resultat nul no cal segona llavor.
+- [x] **Resultat: 508–492 (50,8%) per al Challenger — a mig sigma de
+      l'empat: soroll.** La firma mecànica ho explica: les cerques ofegades
+      baixen (283 → 139) però ja no compren partides; la feina mitjana per
+      cerca gairebé no puja (19.984 → 23.349 nodes) perquè la immensa
+      majoria de cerques acaben molt per sota de 500k. La victòria més
+      contundent d'A i la de B són la mateixa partida (llavor 526, ±121):
+      els dos motors juguen pràcticament idèntic en gairebé tots els
+      repartiments.
+- [x] **Decisió (regla pre-registrada): via tancada, cap promoció.** El
+      Campió queda validat al genoll de la corba: 30k ≪ 120k < **500k** ≈ 1M.
+      L'entrada del catàleg queda marcada VIA TANCADA (es conserva per
+      reproduir l'experiment).
+
+### Problemes trobats
+
+*(cap: resultat nul net, que és informació igual de bona — estalvia doblar el
+cost de càlcul per no res)*
+
+### Experiment programat, pendent d'executar: Challenger Punts ⏸️ (2026-08-28)
+
+La primera hipòtesi **estratègica** (la següent segons la regla
+pre-registrada), programada aquí i **pendent que l'usuari l'executi** al seu
+ordinador.
+
+- [x] **Hipòtesi**: a igualtat de fitxes jugades, l'Expert tria arbitràriament
+      entre propostes; desfer-se de més punts (i quedar-se a la mà les fitxes
+      barates) hauria de reduir la magnitud de les derrotes (els −121 venen
+      dels 13 i els jokers encallats).
+- [x] **Implementació, tota rere `preferPointsTieBreak` (apagat per defecte a
+      tots els nivells: el baseline de regressió no es mou ni una jugada)**:
+      a la cerca de reordenació, cost compost `fitxes·10000 + punts` — entre
+      repartiments amb les mateixes fitxes col·locades, es queda les de menys
+      valor pendent (jokers a 30); i l'empat voraç–reordenació es resol per
+      punts baixats en comptes de sempre-voraç. Mai no fa jugar ni una fitxa
+      més ni una menys: només tria entre empats.
+- [x] `challenger-punts` al catàleg (nivell expert, mateix pressupost de 500k
+      que el Campió, overrides amb la bandera), i el paràmetre surt a la
+      secció de Diferències.
+- [x] Tests (`test/preferPoints.test.ts`): l'empat de manual
+      ([J,2r,3r,13b,13k] → baixa [13,13,J] i es queda {2,3}), la bandera no
+      canvia mai el nombre de fitxes, el challenger juga determinista i
+      sense errors, i la diferència amb el Campió és la bandera i no el
+      pressupost.
+- [ ] Cribratge (usuari): `npm run lab -- --engine-a expert-v2 --engine-b
+      challenger-punts --games 100 --seed 42`
+- [ ] Confirmació (usuari): `... --games 1000 --seed 11000 --json
+      informe-punts.json --report informe-punts.md` (llavor independent).
+- [ ] Decisió amb els resultats: ≥53–55% sostingut → candidat a promoció
+      (expert-v3); ~50% → es descarta la hipòtesi i es passa a la següent
+      (gestió del final de partida). Mireu també «Punts mitjans»: aquesta
+      hipòtesi podria retallar el marge de les derrotes encara que el % de
+      victòries es mogui poc.
+
+### Problemes trobats
+
+*(pendent dels resultats de l'usuari)*
+
+### El registre antic de l'experiment 1M (substituït pel tancament de dalt)
+
+<details><summary>Registre original, abans dels resultats</summary>
+
+### Challenger 1M (registre previ) ⏸️ (2026-08-28)
 
 El pas següent de la corba de nodes, **programat aquí i executat per l'usuari
 al seu ordinador** (decisió seva: el laboratori remot no el corre).
@@ -1716,9 +1788,7 @@ al seu ordinador** (decisió seva: el laboratori remot no el corre).
       50–52% → corba amortitzada, es tanca la via i es passa a la hipòtesi
       següent (desempat per punts).
 
-### Problemes trobats
-
-*(pendent dels resultats de l'usuari)*
+</details>
 
 ---
 

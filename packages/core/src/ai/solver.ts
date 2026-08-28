@@ -1,5 +1,6 @@
 import { COLORS, INITIAL_MELD_POINTS, MAX_GROUP_SIZE, MAX_VALUE, MIN_MELD_SIZE, MIN_VALUE } from '../core/constants';
 import { analyzeMeld } from '../core/melds';
+import { tilePoints } from '../core/scoring';
 import { bestRearrangement } from './rearrange';
 import { isJoker, isNumberTile } from '../core/tiles';
 import type { GameState, Meld, NumberTile, Tile, TileColor } from '../core/types';
@@ -22,6 +23,12 @@ export interface SolverOptions {
   allowRearrange?: boolean;
   /** Sostre de nodes de la cerca de reordenació. */
   maxNodes?: number;
+  /**
+   * Desempat per punts (vegeu ai/difficulty.ts): a igualtat de fitxes
+   * jugades, prefereix la proposta que es desfà de més punts. No fa jugar mai
+   * ni una fitxa més ni una menys: només tria entre empats.
+   */
+  preferPointsTieBreak?: boolean;
   /** Sortida de diagnòstic per al motor: no canvia cap decisió. */
   stats?: SearchStats;
 }
@@ -234,16 +241,39 @@ export function chooseBestPlay(
   const rearrangeStats = stats ? { nodes: 0, limited: false } : undefined;
   const rearranged = bestRearrangement(state.board, player.rack, {
     maxNodes: options.maxNodes,
+    preferPoints: options.preferPointsTieBreak,
     stats: rearrangeStats,
   });
   if (stats && rearrangeStats) {
     stats.nodes = rearrangeStats.nodes;
     stats.searchLimited = rearrangeStats.limited;
   }
-  if (!rearranged || rearranged.tilesUsed <= (greedy?.tilesUsed ?? 0)) return greedy;
+  if (!rearranged || rearranged.tilesUsed < (greedy?.tilesUsed ?? 0)) return greedy;
+  if (rearranged.tilesUsed === (greedy?.tilesUsed ?? 0)) {
+    /*
+     * Empat en fitxes entre la voraç i la reordenació: sense el desempat per
+     * punts es juga la voraç, com sempre; amb el desempat, la reordenació
+     * només guanya l'empat si es desfà d'estrictament més punts.
+     */
+    const rearrangeWinsTie =
+      options.preferPointsTieBreak &&
+      greedy !== null &&
+      shedPoints(state.board, rearranged.board) > shedPoints(state.board, greedy.board);
+    if (!rearrangeWinsTie) return greedy;
+  }
   if (!isSoundProposal(state.board, player.rack, rearranged.board)) return greedy;
   if (stats) stats.rearrangeUsed = true;
   return { board: rearranged.board, tilesUsed: rearranged.tilesUsed, points };
+}
+
+/** Punts pendents que una proposta es treu de la mà (fitxes noves a la taula). */
+function shedPoints(before: Meld[], proposal: Meld[]): number {
+  const old = new Set(before.flat().map((tile) => tile.id));
+  let points = 0;
+  for (const meld of proposal) {
+    for (const tile of meld) if (!old.has(tile.id)) points += tilePoints(tile);
+  }
+  return points;
 }
 
 /**

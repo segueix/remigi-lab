@@ -76,6 +76,7 @@ export function decideAiMove(
     allowExtensions: params.extendsBoard,
     allowRearrange: params.rearrangesTable,
     maxNodes: options.maxNodes ?? params.maxNodes,
+    preferPointsTieBreak: params.preferPointsTieBreak,
     stats: options.stats,
   });
   if (options.stats) options.stats.foundPlay = best !== null;
