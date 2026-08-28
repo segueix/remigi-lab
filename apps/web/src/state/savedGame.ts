@@ -3,7 +3,13 @@ import { validMisses, type MissedChance } from '../game/missedChances';
 import type { GameSetup } from '../game/useGame';
 import type { KeyValueStore } from '@remigi/core';
 
-const KEY = 'remigi:game';
+/**
+ * Clau **lògica** de la partida desada. L'espai de noms del laboratori
+ * (`remigi-lab:`) l'hi posa el `KeyValueStore` de la web, un sol cop i en un
+ * sol lloc (vegeu `storage/namespace.ts`): aquí no s'hi ha d'afegir, o
+ * quedaria dues vegades.
+ */
+export const SAVED_GAME_KEY = 'remigi:game';
 
 export interface SavedGame {
   setup: GameSetup;
@@ -28,11 +34,11 @@ export interface SavedGame {
 }
 
 export async function saveGame(store: KeyValueStore, saved: SavedGame): Promise<void> {
-  await store.set(KEY, JSON.stringify(saved));
+  await store.set(SAVED_GAME_KEY, JSON.stringify(saved));
 }
 
 export async function clearGame(store: KeyValueStore): Promise<void> {
-  await store.remove(KEY);
+  await store.remove(SAVED_GAME_KEY);
 }
 
 /**
@@ -44,7 +50,7 @@ export async function clearGame(store: KeyValueStore): Promise<void> {
  * carregar un estat que faria petar la partida.
  */
 export async function loadGame(store: KeyValueStore): Promise<SavedGame | null> {
-  const raw = await store.get(KEY);
+  const raw = await store.get(SAVED_GAME_KEY);
   if (!raw) return null;
   try {
     let saved = JSON.parse(raw) as SavedGame;

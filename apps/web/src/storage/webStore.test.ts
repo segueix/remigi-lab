@@ -64,10 +64,12 @@ describe('detecció de localStorage', () => {
 });
 
 describe('createWebStore', () => {
-  it('fa servir localStorage quan es pot', async () => {
+  it('fa servir localStorage quan es pot, dins de l’espai de noms del laboratori', async () => {
     const storage = new FakeStorage();
     await createWebStore(storage).set('k', 'v');
-    expect(storage.getItem('k')).toBe('v');
+    expect(storage.getItem('remigi-lab:k')).toBe('v');
+    // I no deixa res a la clau pelada, que seria la del joc de producció.
+    expect(storage.getItem('k')).toBeNull();
   });
 
   it('degrada a memòria, sense petar, quan no es pot escriure', async () => {
@@ -89,5 +91,33 @@ describe('integració amb el motor', () => {
     // Una pestanya nova: store i repositori nous sobre el mateix localStorage.
     const loaded = await new ProfileRepository(createWebStore(storage)).load('local');
     expect(loaded).toMatchObject({ name: 'Anna', rating: 1234 });
+  });
+});
+
+/*
+ * Publicat, el laboratori comparteix origen amb el Remigi de producció, i
+ * localStorage és per origen: si el clon escrivís a les claus de sempre,
+ * jugar-hi una partida humana s'enduria el perfil i la partida desada del joc
+ * de debò. Això ho fixa.
+ */
+describe('el laboratori no toca les dades del joc de producció', () => {
+  it('el perfil del clon va a la seva clau, no a la de producció', async () => {
+    const storage = new FakeStorage();
+    await new ProfileRepository(createWebStore(storage)).save(createProfile('local', 'Anna'));
+
+    expect(storage.getItem('remigi-lab:profile:local')).not.toBeNull();
+    expect(storage.getItem('remigi:profile:local')).toBeNull();
+  });
+
+  it('un perfil de producció ja desat no es llegeix ni es sobreescriu', async () => {
+    const storage = new FakeStorage();
+    const produccio = JSON.stringify({ ...createProfile('local', 'Daniel'), rating: 1600 });
+    storage.setItem('remigi:profile:local', produccio);
+
+    const repository = new ProfileRepository(createWebStore(storage));
+    expect(await repository.load('local')).toBeNull(); // el clon comença de zero
+    await repository.save(createProfile('local', 'Laboratori'));
+
+    expect(storage.getItem('remigi:profile:local')).toBe(produccio); // intacte
   });
 });

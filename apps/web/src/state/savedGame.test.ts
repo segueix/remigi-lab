@@ -1,6 +1,6 @@
 import { MemoryStore, applyMove, createGame, decideAiMove } from '@remigi/core';
 import { describe, expect, it } from 'vitest';
-import { clearGame, loadGame, saveGame, type SavedGame } from './savedGame';
+import { SAVED_GAME_KEY, clearGame, loadGame, saveGame, type SavedGame } from './savedGame';
 
 const setup = { playerName: 'Anna', opponents: ['easy', 'medium'] as const };
 
@@ -68,7 +68,9 @@ describe('desar i continuar la partida', () => {
 describe('el que hi ha desat no és de fiar', () => {
   async function stored(value: string) {
     const store = new MemoryStore();
-    await store.set('remigi:game', value);
+    // La clau surt del mòdul: així no pot desviar-se de la de debò (i una
+    // prova que esperi `null` no passarà mai per haver escrit on no toca).
+    await store.set(SAVED_GAME_KEY, value);
     return loadGame(store);
   }
 

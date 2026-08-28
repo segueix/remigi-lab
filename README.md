@@ -11,6 +11,26 @@ conserva sencera a `#joc`.
 > El laboratori serveix per decidir amb mesures quin motor és millor; portar el
 > guanyador a producció és sempre un pas manual (vegeu
 > [`docs/AI-LAB.md`](docs/AI-LAB.md)).
+>
+> Publicats, tots dos viuen al mateix origen (`segueix.github.io`) i
+> `localStorage` és **per origen, no per ruta**: per això el laboratori desa
+> dins del seu propi espai de noms (`remigi-lab:`, vegeu
+> `apps/web/src/storage/namespace.ts`) i té la seva memòria cau
+> (`remigi-lab-v1`). Jugar-hi la partida humana no toca ni el perfil ni la
+> partida desada del joc de debò.
+
+## Publicar-lo a GitHub Pages
+
+El desplegament és automàtic a cada canvi a `main`, però la **primera vegada
+cal activar Pages a mà** (el flux no té permís per crear el lloc):
+
+1. **Settings → Pages** del repositori `remigi-lab` → *Source*: **GitHub Actions**.
+2. **Actions → «Desplega a GitHub Pages» → Run workflow** (o torna a executar
+   l'última execució fallida).
+3. Queda publicat a `https://segueix.github.io/remigi-lab/`.
+
+Si el pas 1 no s'ha fet, el desplegament falla amb
+*«Create Pages site failed: Resource not accessible by integration»*.
 
 ## El laboratori en dues línies
 

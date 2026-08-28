@@ -23,7 +23,7 @@ test('robar havent-hi jugada acaba en quiz sobre el mateix tauler', async ({ pag
   const roba = page.getByRole('button', { name: 'Robar fitxa' });
   const misses = () =>
     page.evaluate(() => {
-      const saved = localStorage.getItem('remigi:game');
+      const saved = localStorage.getItem('remigi-lab:game');
       return saved ? (JSON.parse(saved).misses?.length ?? 0) : -1;
     });
 

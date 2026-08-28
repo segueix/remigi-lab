@@ -58,6 +58,27 @@ npm run lab -- --match --seed 43 --first A    # una partida, torn a torn
 La partida humana de sempre continua sencera a **`#joc`** (botó «Partida
 humana» al laboratori; «Laboratori de motors» al menú del jugador per tornar).
 
+### Publicat: el laboratori no toca les dades del joc de debò
+
+Un cop a GitHub Pages, el laboratori (`/remigi-lab/`) i el Remigi de producció
+(`/remigi/`) pengen del **mateix origen**, i tant `localStorage` com la
+memòria cau són per origen, no per ruta. Per això el clon té el seu propi
+espai de noms:
+
+| | producció | laboratori |
+|---|---|---|
+| perfil | `remigi:profile:local` | `remigi-lab:profile:local` |
+| partida desada | `remigi:game` | `remigi-lab:game` |
+| jeroglífics, preferències | `remigi:…` | `remigi-lab:…` |
+| memòria cau | `remigi-v1` | `remigi-lab-v1` |
+
+El prefix el posa **el `KeyValueStore` de la web** (`NamespacedStore`), en un
+sol lloc: el codi que desa per store fa servir la clau lògica (`remigi:game`)
+i no ha d'afegir res; només el que escriu a `localStorage` directament crida
+`labKey`. Posar-lo dues vegades és l'error a evitar. Ho fixen dues proves
+d'unitat (`storage/webStore.test.ts`): el perfil del clon va a la seva clau, i
+un perfil de producció ja desat no es llegeix ni es sobreescriu.
+
 ## Motor A vs Motor B
 
 A dalt de la pantalla hi ha les dues targetes amb el **VS** al mig. Cada

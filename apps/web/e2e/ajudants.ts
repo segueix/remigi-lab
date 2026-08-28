@@ -1,6 +1,6 @@
 import { expect, type Page } from '@playwright/test';
 
-export const PROFILE_KEY = 'remigi:profile:local';
+export const PROFILE_KEY = 'remigi-lab:profile:local';
 
 /** Obre el menú del jugador (tocar la teva targeta, a dalt). */
 export async function obreMenu(page: Page): Promise<void> {
@@ -134,10 +134,10 @@ export async function entraAmbPartida(
       localStorage.clear();
       localStorage.setItem('e2e:llavor', '1');
       if (dades.jeroglifics.length > 0) {
-        localStorage.setItem('remigi:jeroglifics', JSON.stringify(dades.jeroglifics));
+        localStorage.setItem('remigi-lab:jeroglifics', JSON.stringify(dades.jeroglifics));
       }
       localStorage.setItem(
-        'remigi:profile:local',
+        'remigi-lab:profile:local',
         JSON.stringify({
           id: 'local',
           name: 'Daniel',
@@ -148,7 +148,7 @@ export async function entraAmbPartida(
         }),
       );
       localStorage.setItem(
-        'remigi:game',
+        'remigi-lab:game',
         JSON.stringify({
           setup: { playerName: 'Daniel', opponents: ['easy'] },
           owners: dades.autors,

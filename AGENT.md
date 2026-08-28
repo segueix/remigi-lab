@@ -1559,6 +1559,57 @@ sempre com a referència (`expert-v1`, fixat pel test de regressió).
   de `packages/core` (el cwd del workspace). Resolt resolent els camins
   relatius contra `INIT_CWD`, que és des d'on s'ha executat l'ordre.
 
+### Publicació del laboratori i separació de les dades de producció ✅ Feta (2026-08-28)
+
+En anar a publicar el clon van sortir dues coses, una de configuració i una
+que hauria fet perdre dades de debò.
+
+- [x] **Pages no estava activat** a `segueix/remigi-lab`: el desplegament
+      fallava amb «Create Pages site failed: Resource not accessible by
+      integration». El `enablement: true` del flux no basta si el lloc no
+      existeix — el `GITHUB_TOKEN` no el pot crear. **És una passa manual**:
+      Settings → Pages → Source: GitHub Actions, i tornar a llançar el flux.
+      Documentat al README.
+- [x] **Espai de noms propi al navegador** (`storage/namespace.ts`): publicats,
+      el laboratori (`/remigi-lab/`) i el joc de producció (`/remigi/`)
+      comparteixen **origen**, i `localStorage` és per origen, no per ruta.
+      Amb les claus de sempre, jugar la partida humana del laboratori hauria
+      sobreescrit el perfil, la partida a mitges i la col·lecció de
+      jeroglífics del Remigi de debò. Ara tot el que el clon desa va a
+      `remigi-lab:*`: el `KeyValueStore` de la web ho aplica en un sol lloc
+      (`NamespacedStore`, que bescanvia el prefix `remigi:` del motor) i les
+      preferències que escriuen a `localStorage` directament ho fan amb
+      `labKey`.
+- [x] **Memòria cau del service worker separada** (`remigi-lab-v1`), i la
+      neteja de generacions velles filtrada pel seu prefix: esborrar per nom
+      diferent hauria destruït la memòria cau del joc de producció (i tots dos
+      s'haurien anat esborrant l'un a l'altre a cada activació).
+- [x] **La migració `rummikub:*` → `remigi:*` s'ha retirat del clon**: era
+      història del joc de producció i, en aquest origen compartit, hauria
+      escrit justament a les claus que s'estan protegint.
+
+**Criteris d'acceptació (verificats)**: 167 + 77 tests i les 103 proves de
+navegador en verd; dues proves noves fixen que el perfil del clon va a
+`remigi-lab:profile:local` i que un perfil de producció ja desat **ni es
+llegeix ni es sobreescriu**. Comprovat també amb el navegador sobre el build:
+sembrant `remigi:profile:local` i `remigi:game` a l'origen i jugant al
+laboratori (nom nou i un torn), les dues claus de producció queden intactes i
+el laboratori crea les seves.
+
+### Problemes trobats
+
+- [2026-08-28] **Doble prefix**: en posar `labKey` a `savedGame.ts` i, a
+  sobre, al `KeyValueStore` de la web, la clau quedava
+  `remigi-lab:remigi-lab:game` i la partida desada no es trobava mai (ho van
+  destapar 8 proves e2e del quiz, que injecten partides). La regla queda
+  clara: **qui passa per un `KeyValueStore` fa servir la clau lògica**
+  (`remigi:game`) i el prefix el posa el store, un sol cop; només qui escriu a
+  `localStorage` directament (preferències, col·lecció) crida `labKey`.
+- [2026-08-28] Una prova de `savedGame` escrivia la clau a mà
+  (`'remigi:game'`) i, en canviar-la, comprovava `null` per haver escrit on no
+  tocava: passava per la raó equivocada. Resolt exportant `SAVED_GAME_KEY` del
+  mòdul i fent-la servir a la prova.
+
 ---
 
 ## Riscos coneguts (a vigilar quan toqui)
