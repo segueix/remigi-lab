@@ -1728,7 +1728,7 @@ al seu ordinador**.
 *(cap: resultat nul net, que és informació igual de bona — estalvia doblar el
 cost de càlcul per no res)*
 
-### Experiment programat, pendent d'executar: Challenger Punts ⏸️ (2026-08-28)
+### Hipòtesi massa estreta, no falsa: Challenger Punts 🔍 (2026-08-28)
 
 La primera hipòtesi **estratègica** (la següent segons la regla
 pre-registrada), programada aquí i **pendent que l'usuari l'executi** al seu
@@ -1753,19 +1753,44 @@ ordinador.
       canvia mai el nombre de fitxes, el challenger juga determinista i
       sense errors, i la diferència amb el Campió és la bandera i no el
       pressupost.
-- [ ] Cribratge (usuari): `npm run lab -- --engine-a expert-v2 --engine-b
-      challenger-punts --games 100 --seed 42`
-- [ ] Confirmació (usuari): `... --games 1000 --seed 11000 --json
-      informe-punts.json --report informe-punts.md` (llavor independent).
-- [ ] Decisió amb els resultats: ≥53–55% sostingut → candidat a promoció
-      (expert-v3); ~50% → es descarta la hipòtesi i es passa a la següent
-      (gestió del final de partida). Mireu també «Punts mitjans»: aquesta
-      hipòtesi podria retallar el marge de les derrotes encara que el % de
-      victòries es mogui poc.
+- [x] **Cribratge de l'usuari** (100 partides, llavor 42): contra el Campió,
+      **49–51** (+0,9 punts de mitjana). Dins de la banda de soroll.
+- [x] L'usuari va córrer també contra `expert-v1`: 44–56. **Aquesta
+      comparació està confosa** i no diu res del desempat: barreja la
+      bandera amb el pressupost de nodes (120k vs 500k), i la firma ho
+      delata (nodes 12.834 vs 24.424, cerques limitades 131 vs 58) — és el
+      retrat de la promoció del 500k, no de la hipòtesi. Contra el mateix
+      rival i la mateixa llavor, l'expert-v2 pelat feia 54–46: el desempat
+      hi afegeix +2 victòries de 100, o sigui soroll.
+- [x] **La sonda ho explica** (`--probe`, eina nova; vegeu docs/AI-LAB.md):
+      en 100 partides, **3.012 moviments del challenger i només 13 jugades
+      canviades** — 0,4% dels moviments, **1,1% de les jugades**, una cada
+      ~8 partides. `tilesDelta` 0, com mana l'invariant.
+- [x] **Veredicte: la hipòtesi no és falsa, és massa estreta.** Quan
+      s'activa fa exactament el que havia de fer — **6,8 punts pendents
+      menys per canvi** (88 en 100 partides) —, i el +0,9 de punts mitjans
+      del torneig quadra en magnitud amb aquests 0,88 punts per partida. El
+      problema és la freqüència: amb 1,1% d'activació, cap torneig no pot
+      mesurar la idea. **No es corre la confirmació de 1.000 partides**:
+      donaria 50% ± soroll digués el que digués la idea.
+- [ ] **Pas següent proposat** (pendent de decisió de l'usuari): eixamplar
+      la regla — acceptar una jugada amb **una fitxa menys** si es desfà de
+      força més punts (un 13 i un joker encallats són 43 punts), amb el
+      llindar com a paràmetre. Això sí que s'activaria sovint i llavors el
+      torneig mesuraria la idea de debò.
+
+**Lliçó de mètode, per a tots els experiments futurs: sondejar abans de
+confirmar.** Un torneig igualat té dues lectures (idea dolenta / idea que no
+s'activa) i el marcador sol no les distingeix. La sonda triga un minut i
+estalvia confirmacions inútils — o pitjor, la conclusió equivocada.
 
 ### Problemes trobats
 
-*(pendent dels resultats de l'usuari)*
+- [2026-08-28] **Cribratge confós**: comparar el challenger amb `expert-v1`
+  barrejava dues diferències alhora (la bandera i el pressupost de nodes) i
+  el 56% semblava una victòria de la hipòtesi quan era la del 500k que ja
+  teníem mesurada. Regla que en queda: **un challenger es mesura sempre
+  contra el Campió vigent**, que és qui només difereix en allò que es prova.
 
 ### El registre antic de l'experiment 1M (substituït pel tancament de dalt)
 

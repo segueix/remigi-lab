@@ -133,7 +133,7 @@ export const ENGINE_CATALOG: EngineSpec[] = [
     strategy: 'voraç + reordenació completa + desempat per punts',
     engineVersion: ENGINE_VERSION,
     description:
-      'Primera hipòtesi estratègica: a igualtat de fitxes jugades, tria la jugada que es desfà de més punts i es queda a la mà les fitxes barates (els 13 i els jokers costen car en perdre). Mateix pressupost de cerca que el Campió. Pendent d’executar (cribratge llavor 42, confirmació llavor 11000).',
+      'MASSA ESTRET (2026-08-28): la idea és bona però gairebé mai no s’activa — la sonda (--probe) el mesura en l’1,1% de les jugades, i quan hi actua es treu 6,8 punts pendents de més. Torneig contra el Campió: 49–51, soroll. El pas següent seria eixamplar-lo (canviar una fitxa per punts), no descartar-lo.',
     color: '#f472b6',
     role: 'challenger',
     config: { level: 'expert', overrides: { preferPointsTieBreak: true } },
