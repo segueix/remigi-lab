@@ -1612,6 +1612,40 @@ el laboratori crea les seves.
 
 ---
 
+### El primer experiment del cicle: Challenger 500k ✅ Fet (2026-08-28)
+
+El primer ús de debò del laboratori acabat de construir: la hipòtesi més
+barata (només configuració, zero canvis de codi) passada pel cicle sencer
+hipòtesi → cribratge → confirmació.
+
+- **Hipòtesi**: el sostre de 120.000 nodes de la cerca de reordenació es queda
+  curt — quan s'esgota, el motor recula a la jugada voraç. Amb 500.000, les
+  posicions complexes es resolen i es guanyen partides.
+- **Challenger**: `challenger-500k` al catàleg (nivell expert, `maxNodes`
+  500.000). Cap canvi a `ai/`: el baseline de regressió ni es toca.
+- **Cribratge** (100 partides, llavor base 42): 54–46 per al Challenger.
+  Dins del soroll, però amb la firma del mecanisme: 58 cerques limitades
+  contra 137 de l'Expert.
+- **Confirmació** (1.000 partides, llavor base 7000, independent de la del
+  cribratge): **557–443 (55,7%)** per al Challenger — unes 3,6 desviacions
+  estàndard per sobre de l'empat, i encara més sòlid amb les llavors
+  aparellades. Firma consistent: cerques limitades 514 contra 1.468,
+  reordenacions 4.092 contra 3.750, jeroglífics 3.523 contra 3.181,
+  complexitat mitjana 12,05 contra 10,44 i la jugada més complexa del
+  laboratori fins ara (98). Cost: el doble de temps per decisió (14,6 ms de
+  mitjana, p95 68,8 ms) — de sobres per a la web, on la pausa del bot és de
+  3 s. `AI_REPORT.md` (arrel) és l'informe d'aquesta confirmació.
+- **Conclusió**: la primera millora real del motor és **confirmada i és de
+  franc en codi** (un número). La promoció a Campió (`expert-v2`, i el nivell
+  expert del joc amb 500k) **no s'ha fet**: és una decisió de l'usuari, i el
+  cicle és expressament manual.
+
+### Problemes trobats
+
+*(cap: el circuit va anar fi de punta a punta al primer experiment real)*
+
+---
+
 ## Riscos coneguts (a vigilar quan toqui)
 
 - ~~**Vite + workspace amb font TS**~~ (Fase 2): **tancat**. `@remigi/core`
