@@ -1,7 +1,7 @@
 {
-  "name": "Remigi",
-  "short_name": "Remigi",
-  "description": "Remigi: rummy de fitxes contra oponents que s'adapten al teu nivell",
+  "name": "Remigi AI Lab",
+  "short_name": "Remigi Lab",
+  "description": "El laboratori de desenvolupament de motors del Remigi: Motor A contra Motor B, torneigs i mètriques",
   "lang": "ca",
   "start_url": "./",
   "scope": "./",

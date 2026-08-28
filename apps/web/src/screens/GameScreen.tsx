@@ -40,6 +40,8 @@ interface Props {
   savedGame: SavedGameHandle;
   /** Obre l'historial (les estadístiques). */
   onHistory(): void;
+  /** Torna al laboratori de motors (la pantalla principal d'aquest clon). */
+  onLab?(): void;
   tileStyle: TileStyle;
   onTileStyle(style: TileStyle): void;
 }
@@ -52,6 +54,7 @@ export function GameScreen({
   profile,
   savedGame,
   onHistory,
+  onLab,
   tileStyle,
   onTileStyle,
 }: Props) {
@@ -272,6 +275,7 @@ export function GameScreen({
             }}
             onNewGame={startNewGame}
             onHistory={onHistory}
+            onLab={onLab}
             onClose={() => setMenuOpen(false)}
           />
         )}

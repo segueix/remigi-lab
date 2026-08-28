@@ -6,6 +6,11 @@ per acabada i un registre de problemes. **Aquest document és l'estat de la
 veritat del projecte**: mira'l abans de començar cap feina i actualitza'l en
 acabar-la.
 
+> **Aquest repositori és el clon-laboratori (Remigi AI Lab).** La pantalla
+> principal és el laboratori de motors (vegeu `docs/AI-LAB.md`); el joc humà
+> es conserva a `#joc`. El Remigi de producció és `segueix/remigi` i **no es
+> modifica des d'aquí**: cap canvi d'aquest clon no s'hi porta automàticament.
+
 ## Protocol de treball de l'agent
 
 1. **Abans de començar**: llegeix aquest document i localitza la primera fase
@@ -29,10 +34,11 @@ acabar-la.
      tot estat immutable i serialitzable; l'única API pública és `src/index.ts`
      (i `persistence/jsonFileStore.ts` importat a banda, perquè depèn de Node).
    - Les capes només depenen en aquesta direcció:
-     `core ← ai ← engine` i `core ← adaptive`, amb `(persistence, cli, web)`
-     al capdamunt. La IA es demana **sempre** a través del motor
-     (`engine/`, vegeu `docs/ENGINE.md`); cap codi nou no importa `ai/`
-     directament.
+     `core ← ai ← engine ← lab` i `core ← adaptive`, amb
+     `(persistence, cli, web)` al capdamunt. La IA es demana **sempre** a
+     través del motor (`engine/`, vegeu `docs/ENGINE.md`); cap codi nou no
+     importa `ai/` directament — el laboratori (`lab/`, vegeu
+     `docs/AI-LAB.md`) tampoc.
    - Identificadors de codi en anglès; comentaris, docs, missatges d'error i UI
      en **català**.
    - Documentació de referència: `docs/ARQUITECTURA.md`, `docs/REGLES.md`,
@@ -1458,6 +1464,100 @@ canviar ni una jugada de cap nivell.
   ha sortit neta a la primera (sortida del simulador idèntica byte a byte i
   els 196 tests en verd), perquè el motor crida exactament el mateix
   `decideAiMove` de sempre amb el mateix consum de RNG.
+
+### REMIGI AI LAB: el laboratori Motor A vs Motor B ✅ Feta (2026-08-28)
+
+Demanat pel jugador: transformar **aquest clon** en el laboratori de
+desenvolupament de la IA — la pantalla principal deixa de ser el joc i passa a
+ser una consola per comparar motors, amb el joc humà conservat a `#joc`. Sense
+cap millora deliberada de força: primer separar i mesurar, amb l'Expert de
+sempre com a referència (`expert-v1`, fixat pel test de regressió).
+
+- [x] **Capa `src/lab/` al core** (parla només amb l'API pública del motor):
+      `catalog.ts` (especs de motor: id, versió, estratègia, color, config,
+      rol Campió/Challenger, `factory` opcional per a artefactes externs;
+      afegir una versió = afegir una entrada), `match.ts` (runner pas a pas
+      A vs B: diagnòstic per torn, llavors de motor derivades de la de la
+      partida, invariant de 106 fitxes a cada moviment, errors capturats),
+      `tournament.ts` (N partides amb **llavors aparellades**: cada llavor es
+      juga des dels dos seients; agregats per motor i partides interessants
+      amb el `MatchSetup` de reproducció), `hieroglyph.ts` (la mètrica),
+      `stats.ts` i `report.ts` (JSON `remigi-ai-lab-report/1` i
+      `AI_REPORT.md`, amb conclusió descriptiva, mai decisió de promoció).
+- [x] **Mètrica «jeroglífics»** documentada i determinista: successora per
+      intersecció màxima; esteses +1, alterades +2, fitxes recol·locades +1
+      (jokers +1 extra); trams 0 / 1–2 / 3–5 / 6–9 / **10+ = jeroglífic**. Es
+      calcula fora del motor, després de decidir: no pot influir en cap
+      jugada (test que refà la partida amb l'API pelada i exigeix estat final
+      idèntic).
+- [x] **CLI** (`npm run lab`): `--list`, torneig amb progrés i taula
+      comparativa, `--match` torn a torn, `--json`/`--report`, i l'ordre de
+      reproducció impresa per a cada partida interessant.
+- [x] **La web és el laboratori** (`apps/web/src/lab/`, pantalla per defecte;
+      el joc humà sencer a `#joc` i enllaçat pel menú del jugador): targetes
+      Motor A/B amb selector, config i victòries acumulades; taula amb les
+      **dues mans a la vista**; marcs del color del motor (baixades) i
+      daurats (recol·locades); velocitats pas a pas → màx; fitxa de
+      diagnòstic per jugada; timeline clicable que **rebobina taula i mans**;
+      dashboard comparatiu (partida en viu / últim torneig); torneigs en
+      **Web Worker** amb progrés i cancel·lació; partides interessants amb
+      «Reprodueix»; exportació JSON i AI_REPORT.md des del navegador.
+- [x] **Tests**: 44 de nous al core (mètrica cas per cas, catàleg, matches
+      deterministes i sense contaminació entre costats, torneig que quadra,
+      informes) + `labSession.test.ts` a la web + 8 proves e2e noves del
+      laboratori (partida a màx, pas a pas, reproducció per llavor, canvi de
+      motor, torneig de 10 amb reproducció, exportació, anada i tornada al
+      joc humà). `npm run test:lab` els agrupa.
+- [x] **Docs**: `docs/AI-LAB.md` (tot el laboratori, mètrica inclosa, com
+      afegir un motor, com exportar el guanyador), retocs a `ENGINE.md` i
+      `ARQUITECTURA.md` (capa `lab`), README amb la identitat de laboratori,
+      i `AI_REPORT.md` de mostra generat d'un torneig real de 100 partides.
+
+**Criteris d'acceptació (verificats)**:
+
+- `npm run typecheck`, `npm test` (167 core + 78 web), `npm run build`,
+  `npm run build:engine` + `smoke:engine` i les **103 proves de navegador**
+  en verd (les 4 d'injecció de partida es van adaptar, vegeu problemes).
+- Torneig real de 100 partides Expert v1 vs Challenger 30k (llavor 42,
+  aparellades): **62–38** per a l'Expert, 44,5 s; a 10 partides sortia 5–5 —
+  el sostre de nodes es nota amb mostra gran, que és exactament el que el
+  laboratori ha de saber ensenyar. Informe a `AI_REPORT.md`.
+- Reproducció comprovada de debò: la «jugada individual més complexa» del
+  torneig (complexitat 92, torn 94, llavor 75, comença B) reapareix idèntica
+  reproduint la partida pel CLI i per la interfície.
+- El mateix torneig executat dues vegades dona resultats idèntics (test), i
+  la mateixa partida visual repetida amb «Reinicia» acaba igual (prova e2e).
+
+**Decisions**:
+
+- **Les llavors dels motors es deriven de la de la partida** (`seed·2+seient+1`):
+  el `MatchSetup` (motors, llavor, qui comença) identifica una partida del
+  tot, i cada seient té la seva seqüència de RNG — les errades simulades d'un
+  costat no toquen mai l'altre.
+- **Llavors aparellades per defecte** als torneigs: la mateixa llavor des
+  dels dos seients neutralitza l'avantatge de començar i el repartiment.
+- **El catàleg no porta cap estratègia nova**: la referència i variants de
+  configuració (Challenger 30k, nivells). El circuit sencer queda validat
+  sense canviar ni una jugada, que era el requisit.
+- **«Jeroglífics» del laboratori ≠ jeroglífics-quiz del joc humà**: el nom és
+  volgut (són la mateixa mena de jugada), però la mètrica és telemetria de
+  motors i viu al core; el quiz continua intacte a la web.
+
+### Problemes trobats
+
+- [2026-08-28] **Les proves e2e amb partida injectada van petar** en passar el
+  joc humà a `#joc`: `page.goto('./#joc')` després d'una altra navegació al
+  mateix camí és un canvi de fragment (mateix document) i l'script
+  d'injecció de `localStorage` no s'executava mai. Resolt amb un
+  `page.reload()` dins d'`entraAmbPartida`, que força la càrrega de debò;
+  els senyals `e2e:net`/`e2e:llavor` ja evitaven la doble neteja.
+- [2026-08-28] El test «les mètriques d'A no contaminen B» s'ofegava en el
+  temps límit de vitest per abús de partides expert–expert. Reescrit amb una
+  sola partida expert–novell, que és la que de debò discrimina (errades i
+  reordenacions només poden ser d'un costat).
+- [2026-08-28] `npm run lab -- --report AI_REPORT.md` escrivia el fitxer dins
+  de `packages/core` (el cwd del workspace). Resolt resolent els camins
+  relatius contra `INIT_CWD`, que és des d'on s'ha executat l'ordre.
 
 ---
 

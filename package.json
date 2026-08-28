@@ -13,8 +13,11 @@
     "preview": "npm run preview -w @remigi/web",
     "test": "npm run test --workspaces --if-present",
     "test:engine": "npm run test:engine -w @remigi/core",
+    "test:lab": "npm run test:lab -w @remigi/core",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "simulate": "npm run simulate -w @remigi/core --",
+    "lab": "npm run lab -w @remigi/core --",
+    "ai:lab": "npm run dev -w @remigi/web",
     "test:e2e": "npm run test:e2e -w @remigi/web --"
   }
 }

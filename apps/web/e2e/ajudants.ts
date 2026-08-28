@@ -17,6 +17,8 @@ export async function tancaMenu(page: Page): Promise<void> {
 /**
  * Entra al joc amb un perfil net: l'app reparteix una partida directament, i
  * el nom es posa pel menú del jugador (la pantalla d'inici ja no existeix).
+ * En aquest clon la pantalla principal és el laboratori (Remigi AI Lab); la
+ * partida humana viu a `#joc`, i és on entren totes les proves del joc.
  */
 export async function comencaDeZero(page: Page, nom = 'Daniel'): Promise<void> {
   /*
@@ -30,7 +32,7 @@ export async function comencaDeZero(page: Page, nom = 'Daniel'): Promise<void> {
     localStorage.clear();
     localStorage.setItem('e2e:net', '1');
   });
-  await page.goto('./');
+  await page.goto('./#joc');
   await expect(page.locator('.rack .tile').first()).toBeVisible();
   if (nom !== 'Jugador') {
     await obreMenu(page);
@@ -184,7 +186,13 @@ export async function entraAmbPartida(
       },
     ],
   );
-  // L'app entra directament a la partida desada: no cal cap clic.
-  await page.goto('./');
+  /*
+   * L'app entra directament a la partida desada: no cal cap clic. La
+   * recàrrega és necessària: si la prova ja era a `./#joc`, tornar-hi amb
+   * `goto` és una navegació de fragment (mateix document) i l'script
+   * d'injecció no s'executaria — la partida preparada no entraria mai.
+   */
+  await page.goto('./#joc');
+  await page.reload();
   await expect(page.locator('.rack .tile').first()).toBeVisible();
 }

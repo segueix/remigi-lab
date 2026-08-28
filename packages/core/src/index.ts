@@ -27,5 +27,11 @@ export * from './adaptive/rating';
 export * from './adaptive/experience';
 export * from './adaptive/adaptiveDifficulty';
 
+/*
+ * El laboratori (Remigi AI Lab): Motor A vs Motor B, torneigs, jeroglífics i
+ * informes (vegeu docs/AI-LAB.md). Parla amb la IA només a través del motor.
+ */
+export * from './lab';
+
 export * from './persistence/storage';
 export * from './persistence/profiles';

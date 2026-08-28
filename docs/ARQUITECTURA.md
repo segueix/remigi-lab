@@ -14,9 +14,9 @@ El projecte és un monorepo amb workspaces d'npm:
 Dependències entre capes (sempre en aquesta direcció, mai al revés):
 
 ```
-core  ◄──  ai  ◄──  engine      core ◄── adaptive
-  ▲          ▲        ▲            ▲        ▲
-  └──────────│────────┴────────────┴────────┴──  persistence · cli · app web
+core  ◄──  ai  ◄──  engine  ◄──  lab      core ◄── adaptive
+  ▲          ▲        ▲           ▲          ▲        ▲
+  └──────────│────────┴───────────┴──────────┴────────┴──  persistence · cli · app web
              └─ (només el motor importa ai/)
 ```
 
@@ -25,6 +25,12 @@ La capa **`engine/`** és la porta pública de la IA (vegeu
 `createEngine(...).play(...)` i no importa mai `ai/` directament. És també
 l'entrada del build que genera l'artefacte independent
 `dist/remigi-engine.js`.
+
+La capa **`lab/`** és el laboratori d'aquest clon (vegeu
+[`docs/AI-LAB.md`](AI-LAB.md)): el catàleg de motors comparables, el runner de
+partides Motor A vs Motor B, els torneigs, la mètrica de jeroglífics i els
+informes. Consumeix el motor per la seva API pública, exactament igual que
+l'app.
 
 ## Decisions principals
 
