@@ -92,6 +92,18 @@ export const ENGINE_CATALOG: EngineSpec[] = [
     config: { level: 'expert', maxNodes: 30_000 },
   },
   {
+    id: 'challenger-500k',
+    name: 'Challenger 500k',
+    version: '1.0.0+n500k',
+    strategy: 'voraç + reordenació completa',
+    engineVersion: ENGINE_VERSION,
+    description:
+      'Challenger de pressupost: la mateixa estratègia que l’Expert v1 amb el sostre de cerca apujat a 500.000 nodes. Hipòtesi: les posicions on 120k s’esgota (i el motor recula a la jugada voraç) es resolen i guanyen partides.',
+    color: '#fb923c',
+    role: 'challenger',
+    config: { level: 'expert', maxNodes: 500_000 },
+  },
+  {
     id: 'advanced-v1',
     name: 'Avançat v1',
     version: '1.0.0',
