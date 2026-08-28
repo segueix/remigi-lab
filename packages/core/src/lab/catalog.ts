@@ -20,10 +20,10 @@ import {
  * un artefacte propi (`engine-v2.js`), donar-li una `factory` que
  * l'instanciï amb la mateixa interfície `RemigiEngine`.
  *
- * Fins que no hi hagi millores estratègiques deliberades, el catàleg conté la
- * referència (`expert-v1`, l'Expert de sempre, el Campió) i variants de
- * configuració i de nivell de la mateixa implementació: prou per validar tot
- * el circuit de comparació sense canviar ni una jugada.
+ * El Campió vigent és `expert-v2` (promoció del Challenger 500k, confirmada
+ * amb 1.000 partides: vegeu AI_REPORT.md i AGENT.md). `expert-v1` es conserva
+ * per sempre com a línia de base: és l'Expert d'abans de la refactorització,
+ * congelat a 120.000 nodes, contra qui es mesura tota la història.
  */
 
 export interface EngineConfigSpec {
@@ -68,16 +68,27 @@ export interface EngineSpec {
  */
 export const ENGINE_CATALOG: EngineSpec[] = [
   {
+    id: 'expert-v2',
+    name: 'Expert v2',
+    version: '1.1.0',
+    strategy: 'voraç + reordenació completa',
+    engineVersion: ENGINE_VERSION,
+    description:
+      'El Campió vigent: la mateixa cerca que l’Expert v1 amb el sostre de reordenació a 500.000 nodes. Promocionat del Challenger 500k després de guanyar 557–443 (55,7%) en 1.000 partides aparellades.',
+    color: '#2dd4bf',
+    role: 'champion',
+    config: { level: 'expert', maxNodes: 500_000 },
+  },
+  {
     id: 'expert-v1',
     name: 'Expert v1',
     version: '1.0.0',
     strategy: 'voraç + reordenació completa',
     engineVersion: ENGINE_VERSION,
     description:
-      'L’Expert de referència (el Campió): cerca voraç, extensions i reordenació completa de la taula amb sostre de 120.000 nodes. Juga exactament igual que abans d’encapsular el motor.',
-    color: '#2dd4bf',
-    role: 'champion',
-    config: { level: 'expert' },
+      'El Campió anterior i la línia de base de la regressió: cerca voraç, extensions i reordenació completa amb sostre de 120.000 nodes, congelat per sempre tal com jugava abans d’encapsular el motor.',
+    color: '#94a3b8',
+    config: { level: 'expert', maxNodes: 120_000 },
   },
   {
     id: 'challenger-30k',
@@ -98,7 +109,7 @@ export const ENGINE_CATALOG: EngineSpec[] = [
     strategy: 'voraç + reordenació completa',
     engineVersion: ENGINE_VERSION,
     description:
-      'Challenger de pressupost: la mateixa estratègia que l’Expert v1 amb el sostre de cerca apujat a 500.000 nodes. Hipòtesi: les posicions on 120k s’esgota (i el motor recula a la jugada voraç) es resolen i guanyen partides.',
+      'PROMOCIONAT a Expert v2 (2026-08-28, 557–443 en 1.000 partides). Es conserva al catàleg perquè els informes i les ordres de reproducció de la promoció continuïn funcionant tal qual.',
     color: '#fb923c',
     role: 'challenger',
     config: { level: 'expert', maxNodes: 500_000 },
@@ -168,12 +179,11 @@ export function instantiateEngine(spec: EngineSpec, options: EngineOptions = {})
  * substitucions aplicades, més el sostre de nodes. És el que la interfície
  * ensenya com a «configuració» i el que compara `engineSpecDiff`.
  */
-export function resolveEngineParams(spec: EngineSpec): AiParams & { maxNodes: number | null } {
-  return {
-    ...difficultyByKey(spec.config.level),
-    ...spec.config.overrides,
-    maxNodes: spec.config.maxNodes ?? null,
-  };
+export function resolveEngineParams(
+  spec: EngineSpec,
+): Omit<AiParams, 'maxNodes'> & { maxNodes: number | null } {
+  const params = { ...difficultyByKey(spec.config.level), ...spec.config.overrides };
+  return { ...params, maxNodes: spec.config.maxNodes ?? params.maxNodes ?? null };
 }
 
 export interface EngineSpecDifference {

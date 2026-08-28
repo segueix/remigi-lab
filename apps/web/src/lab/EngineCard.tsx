@@ -60,7 +60,7 @@ export function EngineCard({ seat, spec, wins, active, rackCount, onSelect, disa
 
       <ul className="motor-config">
         <li>nivell {params.key}</li>
-        <li>maxNodes {params.maxNodes ?? '120000 (per defecte)'}</li>
+        <li>maxNodes {params.maxNodes ?? '—'}</li>
         <li>errades {Math.round(params.mistakeRate * 100)}%</li>
         <li>{params.rearrangesTable ? 'reordena la taula' : 'sense reordenació'}</li>
       </ul>

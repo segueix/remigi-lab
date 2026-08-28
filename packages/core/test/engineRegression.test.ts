@@ -63,7 +63,9 @@ describe('regressió comportamental: el motor juga exactament com abans', () => 
   });
 
   for (const level of BASELINE_LEVELS) {
-    it(`nivell ${level}: mateixes jugades a totes les partides de referència`, () => {
+    // L'expert juga amb 500.000 nodes des de la v1.1.0: les seves 5 partides
+    // de referència demanen més temps que el límit per defecte de vitest.
+    it(`nivell ${level}: mateixes jugades a totes les partides de referència`, { timeout: 60_000 }, () => {
       for (const seed of BASELINE_SEEDS) {
         const expected = games.find((g) => g.level === level && g.seed === seed)!;
         const replayed = playFingerprint(level, seed);
@@ -73,7 +75,7 @@ describe('regressió comportamental: el motor juga exactament com abans', () => 
   }
 
   if (process.env.UPDATE_ENGINE_BASELINE) {
-    it('regenera el baseline (UPDATE_ENGINE_BASELINE)', () => {
+    it('regenera el baseline (UPDATE_ENGINE_BASELINE)', { timeout: 300_000 }, () => {
       const regenerated: GameFingerprint[] = [];
       for (const level of BASELINE_LEVELS) {
         for (const seed of BASELINE_SEEDS) regenerated.push(playFingerprint(level, seed));

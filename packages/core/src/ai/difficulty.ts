@@ -18,11 +18,14 @@ export interface AiParams {
   extendsBoard: boolean;
   /** Si està disposat a jugar els jokers de la mà (els nivells baixos se'ls guarden). */
   usesJokers: boolean;
-  /**
-   * Reservat per a la fase següent del solver: reordenar completament la taula
-   * per encabir-hi més fitxes. Encara no implementat (vegeu docs/ARQUITECTURA.md).
-   */
+  /** Si reparteix de nou la taula sencera per encabir-hi més fitxes (ai/rearrange.ts). */
   rearrangesTable: boolean;
+  /**
+   * Sostre de nodes de la cerca de reordenació. Absent: el sostre per defecte
+   * del cercador (120.000, vegeu ai/rearrange.ts). Una crida al motor amb
+   * `maxNodes` explícit sempre hi mana per sobre.
+   */
+  maxNodes?: number;
 }
 
 export const DIFFICULTIES: Record<DifficultyKey, AiParams> = {
@@ -70,6 +73,12 @@ export const DIFFICULTIES: Record<DifficultyKey, AiParams> = {
     extendsBoard: true,
     usesJokers: true,
     rearrangesTable: true,
+    /*
+     * Promocionat del Challenger 500k (2026-08-28): a 1.000 partides amb
+     * llavors aparellades va guanyar 557-443 (55,7%) a l'expert de 120.000
+     * nodes, amb p95 de 68,8 ms per decisió (vegeu AI_REPORT.md).
+     */
+    maxNodes: 500_000,
   },
 };
 

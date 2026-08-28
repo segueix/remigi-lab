@@ -23,10 +23,10 @@ interface Props {
   onPlayHuman(): void;
 }
 
-/** La comparació amb què s'obre el laboratori: el Campió contra el Challenger. */
+/** La comparació amb què s'obre el laboratori: el Campió contra la referència. */
 const INITIAL_SETUP: MatchSetup = {
-  engineA: 'expert-v1',
-  engineB: 'challenger-30k',
+  engineA: 'expert-v2',
+  engineB: 'expert-v1',
   seed: 42,
   firstSeat: 'A',
 };

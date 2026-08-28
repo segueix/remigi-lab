@@ -1646,6 +1646,59 @@ hipòtesi → cribratge → confirmació.
 
 ---
 
+### Promoció: expert-v2 (500k) és el nou Campió ✅ Feta (2026-08-28)
+
+Aprovada per l'usuari després de la confirmació 557–443. La promoció completa,
+en cinc peces:
+
+- [x] **El nivell expert juga a 500.000 nodes**: `AiParams` guanya `maxNodes`
+      opcional (absent = el sostre del cercador, 120.000) i `decideAiMove` el
+      respecta amb la prioritat crida explícita > overrides > nivell. És el
+      camí perquè la millora arribi també al joc humà i al simulador, no
+      només al laboratori.
+- [x] **`ENGINE_VERSION` 1.0.0 → 1.1.0** (MINOR: la IA juga diferent).
+- [x] **Catàleg**: `expert-v2` nou Campió (turquesa, 500k, versió 1.1.0);
+      `expert-v1` queda **congelat per sempre com a línia de base** — sense
+      rol, gris, i amb `maxNodes: 120_000` explícit perquè el canvi del nivell
+      per defecte no li mogui el comportament; `challenger-30k` ara es
+      compara amb la referència; `challenger-500k` es conserva perquè les
+      ordres de reproducció dels informes de la promoció segueixin funcionant.
+      Test nou: **només hi pot haver un Campió** al catàleg.
+- [x] **Baseline de regressió regenerat i assumit**: només canvien 2 de les 25
+      partides de referència, totes dues del nivell expert (les altres 3
+      llavors d'expert no tocaven mai el sostre de 120k). Comprovat game a
+      game contra el fixture anterior: cap altre nivell no es mou ni una
+      jugada. Els tests de regressió porten ara temps límit propi (l'expert a
+      500k triga més que els 5 s per defecte de vitest).
+- [x] **El laboratori s'obre amb la comparació canònica**: Expert v2 (Campió)
+      contra Expert v1 (referència), llavor 42.
+
+**Criteris d'acceptació (verificats)**: typecheck i les dues suites en verd;
+`build:engine` + `smoke:engine` amb la v1.1.0; el duel de sanitat per CLI
+Expert v2 contra Expert v1 (100 partides, llavor 42) reprodueix el 54–46 del
+cribratge de la promoció; proves e2e al dia amb la pantalla nova.
+
+**Decisions**:
+
+- **La referència es pinta explícita, no es congela el defecte**: el nivell
+  expert per defecte ÉS el motor viu (500k pertot); qui vulgui el
+  comportament v1 el demana amb `maxNodes: 120_000`, que és exactament el que
+  fa l'entrada `expert-v1` del catàleg.
+- **`engine.analyze` no canvia** (cerca al sostre del cercador, 120k): és la
+  detecció de jeroglífics-quiz del joc humà i no forma part de la promoció;
+  si mai es vol apujar, que sigui una decisió mesurada a part.
+- Els bots experts del joc humà passen a gastar fins a ~mig segon de càlcul
+  en el pitjor cas (p95 ~69 ms), dins de la pausa de 3 s del torn del bot.
+
+### Problemes trobats
+
+- [2026-08-28] Els tests de regressió van petar per **temps límit**, no per
+  discrepància: les 5 partides d'expert a 500k triguen ~7 s i el límit per
+  defecte de vitest és de 5 s. Resolt amb `timeout` propi als tests de nivell
+  (60 s) i al de regeneració (300 s).
+
+---
+
 ## Riscos coneguts (a vigilar quan toqui)
 
 - ~~**Vite + workspace amb font TS**~~ (Fase 2): **tancat**. `@remigi/core`

@@ -1,5 +1,5 @@
 {
-  "generatedWith": "decideAiMove pre-refactorització",
+  "generatedWith": "engine API (regenerat a consciència)",
   "games": [
     {
       "level": "rookie",
@@ -264,15 +264,15 @@
     {
       "level": "expert",
       "seed": 101,
-      "turns": 88,
+      "turns": 73,
       "winner": 0,
       "finalScores": [
-        156,
-        -45,
-        -111
+        137,
+        -39,
+        -98
       ],
-      "moveTypes": "PPDPPDPDDDPDDDDPDDDDPPPDDDDDDPDDDDPDPDPDDDPDDDPDDDDPPDDDDPPDDDPPDDDDPPPDDDDPDDDPPPDDDPDP",
-      "trajectoryHash": "9ed709995241e824"
+      "moveTypes": "PPDPPDPDDDPDDDDPDDDDPPPDDDDDDPDDDDPDPDPDDDPDDDPDDDDPPDDDDPPDDDPPDDDDPPPDP",
+      "trajectoryHash": "5e9299f7a30d6959"
     },
     {
       "level": "expert",
@@ -293,12 +293,12 @@
       "turns": 76,
       "winner": 0,
       "finalScores": [
-        132,
-        -38,
-        -94
+        146,
+        -22,
+        -124
       ],
-      "moveTypes": "PPDPDDDDDDPDDDPPDDDPDPDDDPPPDDDPDDDDPDDDDPPPDPDDDPDDDDPDDDPDDDDDPDDDDDPPPPDP",
-      "trajectoryHash": "33daa82bab9cae1b"
+      "moveTypes": "PPDPDDDDDDPDDDPPDDDPDPDDDPPPDDDPDDDDPDDDDPPPDPDDDPDDDDPDDDPDDDDDPDPPPPDDDPDP",
+      "trajectoryHash": "c6005ea3c934eb99"
     },
     {
       "level": "expert",
