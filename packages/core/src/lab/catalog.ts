@@ -115,6 +115,18 @@ export const ENGINE_CATALOG: EngineSpec[] = [
     config: { level: 'expert', maxNodes: 500_000 },
   },
   {
+    id: 'challenger-1m',
+    name: 'Challenger 1M',
+    version: '1.1.0+n1m',
+    strategy: 'voraç + reordenació completa',
+    engineVersion: ENGINE_VERSION,
+    description:
+      'Challenger de pressupost: el sostre de cerca a 1.000.000 de nodes, el doble del Campió. Hipòtesi a contrastar: si la corba 30k→120k→500k ja s’aplana, no guanyarà clarament i la via dels nodes queda tancada. Pendent d’executar (cribratge llavor 42, confirmació llavor 9000).',
+    color: '#c4b5fd',
+    role: 'challenger',
+    config: { level: 'expert', maxNodes: 1_000_000 },
+  },
+  {
     id: 'advanced-v1',
     name: 'Avançat v1',
     version: '1.0.0',

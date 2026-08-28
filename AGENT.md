@@ -1699,6 +1699,29 @@ cribratge de la promoció; proves e2e al dia amb la pantalla nova.
 
 ---
 
+### Experiment programat, pendent d'executar: Challenger 1M ⏸️ (2026-08-28)
+
+El pas següent de la corba de nodes, **programat aquí i executat per l'usuari
+al seu ordinador** (decisió seva: el laboratori remot no el corre).
+
+- [x] `challenger-1m` al catàleg: nivell expert, `maxNodes` 1.000.000 (el
+      doble del Campió). Hipòtesi a contrastar: si la corba 30k→120k→500k ja
+      s'aplana, no guanyarà clarament i la via dels nodes queda tancada.
+- [ ] Cribratge (usuari): `npm run lab -- --engine-a expert-v2 --engine-b
+      challenger-1m --games 100 --seed 42`
+- [ ] Confirmació (usuari): `... --games 1000 --seed 9000 --json
+      informe-1m.json --report informe-1m.md` (llavor base independent del
+      cribratge i de la promoció anterior).
+- [ ] Decisió amb els resultats: ≥55% sostingut → candidat a promoció;
+      50–52% → corba amortitzada, es tanca la via i es passa a la hipòtesi
+      següent (desempat per punts).
+
+### Problemes trobats
+
+*(pendent dels resultats de l'usuari)*
+
+---
+
 ## Riscos coneguts (a vigilar quan toqui)
 
 - ~~**Vite + workspace amb font TS**~~ (Fase 2): **tancat**. `@remigi/core`
