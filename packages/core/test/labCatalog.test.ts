@@ -22,11 +22,22 @@ describe('catàleg de motors', () => {
     }
   });
 
-  it('expert-v1 és el Campió de referència, amb el nivell expert', () => {
-    const champion = engineSpecById('expert-v1');
+  it('expert-v2 és el Campió vigent, i només n’hi pot haver un', () => {
+    const champion = engineSpecById('expert-v2');
     expect(champion.role).toBe('champion');
     expect(champion.config.level).toBe('expert');
-    expect(champion.config.maxNodes).toBeUndefined();
+    expect(champion.config.maxNodes).toBe(500_000);
+    expect(ENGINE_CATALOG.filter((spec) => spec.role === 'champion')).toHaveLength(1);
+  });
+
+  it('expert-v1 queda congelat com a línia de base: 120k nodes i cap rol', () => {
+    const baseline = engineSpecById('expert-v1');
+    expect(baseline.role).toBeUndefined();
+    expect(baseline.config.maxNodes).toBe(120_000);
+    // El nivell expert per defecte juga ara a 500k: la referència es pinta
+    // explícitament a 120k perquè el seu comportament no es mogui mai.
+    expect(resolveEngineParams(baseline).maxNodes).toBe(120_000);
+    expect(resolveEngineParams(engineSpecById('expert-v2')).maxNodes).toBe(500_000);
   });
 
   it('demanar un motor que no existeix falla amb un missatge clar', () => {
@@ -45,12 +56,12 @@ describe('catàleg de motors', () => {
     expect(rookie.maxNodes).toBeNull();
   });
 
-  it('la diferència entre el Campió i el Challenger és només el sostre de nodes', () => {
-    const diff = engineSpecDiff(engineSpecById('expert-v1'), engineSpecById('challenger-30k'));
+  it('la diferència entre el Campió i la referència és només el sostre de nodes', () => {
+    const diff = engineSpecDiff(engineSpecById('expert-v2'), engineSpecById('expert-v1'));
     expect(diff.map((d) => d.key)).toEqual(['versió', 'maxNodes']);
     const maxNodes = diff.find((d) => d.key === 'maxNodes')!;
-    expect(maxNodes.a).toBe('—');
-    expect(maxNodes.b).toBe('30000');
+    expect(maxNodes.a).toBe('500000');
+    expect(maxNodes.b).toBe('120000');
   });
 
   it('un espec comparat amb ell mateix no té cap diferència', () => {

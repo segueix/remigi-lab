@@ -88,7 +88,8 @@ targeta ensenya la identitat completa del que s'està comparant:
 - la configuració efectiva (nivell, `maxNodes`, % d'errades, si reordena);
 - el color identificatiu (el mateix que marca les seves fitxes al tauler);
 - les **victòries acumulades** a la sessió (partides visuals + torneigs);
-- el paper: **Campió** (la referència) o **Challenger**.
+- el paper: **Campió** (el vigent) o **Challenger**; la referència històrica
+  (`expert-v1`) no porta insígnia.
 
 El selector de cada costat tria qualsevol motor del catàleg. Canviar un motor
 posa el marcador a zero i descarta el torneig anterior: la comparació vella ja
@@ -285,9 +286,13 @@ hi cap: l'espec admet una `factory` pròpia que retorni la interfície
 
 ## Campió, Challenger i exportar el guanyador
 
-- El camp `role` del catàleg marca el **Campió** (avui `expert-v1`, l'Expert
-  de sempre: la línia de base capturada pel test de regressió) i els
-  **Challengers**. La interfície els compara com qualsevol A/B.
+- El camp `role` del catàleg marca el **Campió** i els **Challengers**; la
+  interfície els compara com qualsevol A/B. El Campió vigent és **`expert-v2`**
+  (500.000 nodes), promocionat del Challenger 500k el 2026-08-28 després de
+  guanyar **557–443** en 1.000 partides aparellades amb llavor independent
+  (vegeu `AI_REPORT.md`). `expert-v1` (120.000 nodes) queda **congelat per
+  sempre com a referència**: és l'Expert d'abans d'encapsular el motor, fixat
+  pel test de regressió, contra qui es mesura tota la història.
 - Quan un Challenger demostri ser millor (torneigs grans, llavors aparellades,
   diferència clara), el camí a producció és:
   1. `npm run build:engine` → `packages/core/dist/remigi-engine.js` (el motor

@@ -32,7 +32,7 @@ Tot això s'exporta des de `@remigi/core` (i és exactament el que conté
 
 | Element | Què és |
 |---|---|
-| `ENGINE_VERSION` | Versió del motor, `"1.0.0"` |
+| `ENGINE_VERSION` | Versió del motor, `"1.1.0"` |
 | `createEngine(options?)` | Crea un motor (`seed` o `rng` opcionals) |
 | `engine.play(state, options?)` | Decideix el moviment d'un jugador |
 | `engine.analyze(state, options?)` | Millor jugada d'una posició, sense errors humans (determinista) |
@@ -70,7 +70,7 @@ La resposta (`EngineDecision`) porta la jugada i el seu diagnòstic:
 ```ts
 {
   move: { type: 'play', board: [...] },  // o { type: 'draw' }
-  engineVersion: '1.0.0',
+  engineVersion: '1.1.0',
   level: 'expert',        // nivell efectivament aplicat
   thinkingTimeMs: 34,     // temps de càlcul
   nodes: 84321,           // nodes de la cerca de reordenació (0 si no s'engega)
@@ -91,7 +91,8 @@ engine.play(state, {
   level: 'medium',         // per defecte, l'aiLevel del jugador dins de l'estat
   rubberBanding: true,     // ajust d'error segons com va l'humà (per defecte, no)
   overrides: { mistakeRate: 0 },  // substitueix paràmetres del nivell (proves)
-  maxNodes: 50_000,        // sostre de la cerca de reordenació
+  maxNodes: 50_000,        // sostre de la cerca (per defecte, el del nivell:
+                           //  l'expert juga a 500.000 des de la v1.1.0)
 });
 ```
 
@@ -183,8 +184,9 @@ npm run build:engine && npm run smoke:engine -w @remigi/core
 ## Fer-lo servir des d'un Web Worker
 
 L'API és síncrona i pura sobre estat JSON, així que passar-la a un worker és
-només embolcallar-la amb missatges (l'app encara no ho necessita: el pitjor
-torn mesurat de l'expert és de ~176 ms):
+només embolcallar-la amb missatges (l'app encara no ho necessita: amb
+l'expert a 500.000 nodes, el p95 mesurat és de ~69 ms per decisió i el pitjor
+cas queda per sota del mig segon):
 
 ```js
 // engine-worker.js

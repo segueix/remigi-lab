@@ -21,14 +21,15 @@ async function jugaFinsAlFinal(page: Page): Promise<void> {
 test('el laboratori és la pantalla principal, amb Motor A vs Motor B', async ({ page }) => {
   await obreLaboratori(page);
 
-  // Les dues targetes amb el Campió i el Challenger d'entrada, i el VS al mig.
+  // Les dues targetes amb el Campió i la referència d'entrada, i el VS al mig.
   await expect(page.getByRole('region', { name: 'Motor A' })).toBeVisible();
   await expect(page.getByRole('region', { name: 'Motor B' })).toBeVisible();
   await expect(page.locator('.lab-vs')).toHaveText('VS');
   await expect(page.locator('.motor-a .motor-rol')).toHaveText('Campió');
-  await expect(page.locator('.motor-b .motor-rol')).toHaveText('Challenger');
-  await expect(page.locator('.motor-a select')).toHaveValue('expert-v1');
-  await expect(page.locator('.motor-b select')).toHaveValue('challenger-30k');
+  // La referència no porta insígnia: no és campió ni challenger.
+  await expect(page.locator('.motor-b .motor-rol')).toHaveCount(0);
+  await expect(page.locator('.motor-a select')).toHaveValue('expert-v2');
+  await expect(page.locator('.motor-b select')).toHaveValue('expert-v1');
 
   // Les dues mans es veuen senceres: 14 fitxes cadascuna, res d'amagat.
   await expect(page.locator('.lab-ma-a .tile')).toHaveCount(14);

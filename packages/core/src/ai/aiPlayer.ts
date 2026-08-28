@@ -17,7 +17,7 @@ export interface AiMoveOptions {
   rubberBanding?: boolean;
   /** Substitueix paràmetres del nivell (proves i comparatives). */
   overrides?: Partial<AiParams>;
-  /** Sostre de nodes de la cerca de reordenació (per defecte, el del cercador). */
+  /** Sostre de nodes de la cerca (per defecte, el del nivell o el del cercador). */
   maxNodes?: number;
   /** Sortida de diagnòstic per al motor: no canvia cap decisió. */
   stats?: AiDecisionStats;
@@ -75,7 +75,7 @@ export function decideAiMove(
     allowJokers: params.usesJokers,
     allowExtensions: params.extendsBoard,
     allowRearrange: params.rearrangesTable,
-    maxNodes: options.maxNodes,
+    maxNodes: options.maxNodes ?? params.maxNodes,
     stats: options.stats,
   });
   if (options.stats) options.stats.foundPlay = best !== null;
