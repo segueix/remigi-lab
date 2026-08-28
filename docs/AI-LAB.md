@@ -261,6 +261,39 @@ torneig»), al CLI i a l'informe: totes tres surten de `comparisonRows`.
 
 N'hi ha un de mostra al repositori: [`AI_REPORT.md`](../AI_REPORT.md).
 
+## La sonda: una variant, arriba a fer res?
+
+Un torneig igualat té **dues** lectures possibles i el marcador sol no les
+distingeix: la hipòtesi és falsa, o s'activa tan poques vegades que no pot
+moure l'agulla. La sonda ho resol:
+
+```bash
+npm run lab -- --probe --engine-a <variant> --engine-b <referència> --games 100
+```
+
+Juga les partides amb la variant i, a **cada** decisió seva, pregunta a banda
+a la referència què hauria jugat en aquella mateixa posició. Compta els
+moviments on les dues taules resultants difereixen. Diu, doncs, quantes
+vegades la variant canvia de debò la jugada — i quants punts pendents es treu
+de més quan ho fa.
+
+La comparació es calcula **després** que la decisió estigui presa i amb un
+motor a part, així que no altera cap partida (com tota la telemetria del
+laboratori). Costa el doble de càlcul, i per això és una eina a part i no un
+camp del diagnòstic: mesurar-ho a cada decisió de cada torneig distorsionaria
+els temps que el torneig mesura.
+
+Com llegir-ho:
+
+| canvis | què vol dir |
+|---|---|
+| 0% | la variant és, en la pràctica, el mateix motor: el torneig no pot dir res |
+| < 5% | s'activa massa poc; un empat **no** condemna la idea, la fa massa estreta |
+| ≥ 5% | s'activa sovint: si el torneig empata, la idea sí que és neutra o dolenta |
+
+Fer-la servir **abans** de gastar 1.000 partides en una confirmació estalvia
+temps i, sobretot, evita la conclusió equivocada.
+
 ## Afegir una versió nova del motor
 
 El cas normal (una variant de configuració o una estratègia ja existent):

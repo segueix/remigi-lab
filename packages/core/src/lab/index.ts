@@ -13,3 +13,4 @@ export * from './match';
 export * from './stats';
 export * from './tournament';
 export * from './report';
+export * from './tiebreakProbe';

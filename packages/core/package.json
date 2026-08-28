@@ -9,7 +9,7 @@
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run",
     "test:engine": "vitest run test/engine.test.ts test/engineRegression.test.ts test/engineArtifact.test.ts",
-    "test:lab": "vitest run test/hieroglyph.test.ts test/labCatalog.test.ts test/labMatch.test.ts test/labTournament.test.ts test/labReport.test.ts test/preferPoints.test.ts",
+    "test:lab": "vitest run test/hieroglyph.test.ts test/labCatalog.test.ts test/labMatch.test.ts test/labTournament.test.ts test/labReport.test.ts test/preferPoints.test.ts test/tiebreakProbe.test.ts",
     "build:engine": "node scripts/build-engine.mjs",
     "smoke:engine": "node scripts/engine-smoke.mjs",
     "simulate": "tsx src/cli/simulate.ts",
