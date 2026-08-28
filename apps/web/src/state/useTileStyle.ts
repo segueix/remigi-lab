@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { labKey } from '../storage/namespace';
 
 /**
  * L'aspecte de les fitxes: del color amb el número i la forma en blanc (el
@@ -9,7 +10,7 @@ import { useCallback, useState } from 'react';
  */
 export type TileStyle = 'classic' | 'invers';
 
-const KEY = 'remigi:fitxes';
+const KEY = labKey('fitxes');
 
 export function useTileStyle(): [TileStyle, (style: TileStyle) => void] {
   const [style, setStyle] = useState<TileStyle>(() => {

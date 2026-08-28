@@ -1,4 +1,5 @@
 import { MemoryStore, type KeyValueStore } from '@remigi/core';
+import { labKey } from './namespace';
 
 /**
  * Adaptador de `localStorage` a la interfície `KeyValueStore` del motor.
@@ -41,6 +42,27 @@ export class LocalStorageStore implements KeyValueStore {
 }
 
 /**
+ * Posa tot el que es desa dins de l'espai de noms del laboratori (vegeu
+ * `namespace.ts`): el clon comparteix origen amb el Remigi de producció i no
+ * li ha de tocar mai les dades.
+ */
+export class NamespacedStore implements KeyValueStore {
+  constructor(private readonly inner: KeyValueStore) {}
+
+  get(key: string): Promise<string | null> {
+    return this.inner.get(labKey(key));
+  }
+
+  set(key: string, value: string): Promise<void> {
+    return this.inner.set(labKey(key), value);
+  }
+
+  remove(key: string): Promise<void> {
+    return this.inner.remove(labKey(key));
+  }
+}
+
+/**
  * Comprova que `localStorage` no només existeix, sinó que **deixa escriure-hi**:
  * al Safari en mode privat, per exemple, l'objecte hi és però `setItem` peta.
  */
@@ -61,7 +83,7 @@ export function isStorageUsable(storage: Storage | undefined): storage is Storag
  * si no, memòria (el perfil viurà només mentre duri la pestanya).
  */
 export function createWebStore(storage: Storage | undefined = globalThis.localStorage): KeyValueStore {
-  if (isStorageUsable(storage)) return new LocalStorageStore(storage);
+  if (isStorageUsable(storage)) return new NamespacedStore(new LocalStorageStore(storage));
   console.warn('localStorage no disponible: el perfil no es conservarà en tancar la pestanya.');
-  return new MemoryStore();
+  return new NamespacedStore(new MemoryStore());
 }

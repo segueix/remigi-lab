@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import { missKey, validMisses, type MissedChance } from '../game/missedChances';
+import { labKey } from '../storage/namespace';
 
 /**
  * La col·lecció de jeroglífics: els trencaclosques que se t'han escapat, de
@@ -8,7 +9,7 @@ import { missKey, validMisses, type MissedChance } from '../game/missedChances';
  * falla es queda en memòria i no passa res). El mateix grup de fitxes només
  * hi entra un cop, i la col·lecció es queda amb els més nous.
  */
-const KEY = 'remigi:jeroglifics';
+const KEY = labKey('jeroglifics');
 
 /** Amb menys que això, el menú encara no ofereix jugar-hi. */
 export const MIN_JEROGLIFICS = 3;

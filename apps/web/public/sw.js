@@ -12,7 +12,14 @@
  *   si el fitxer ha canviat, també n'ha canviat el nom.
  */
 
-const CACHE = 'remigi-v1';
+/*
+ * La memòria cau és per **origen**, i aquest clon es publica al mateix origen
+ * que el Remigi de producció: per això el laboratori té el seu prefix i, en
+ * netejar generacions velles, només esborra les seves. Tocar la memòria cau
+ * del joc de debò el deixaria sense poder obrir-se sense connexió.
+ */
+const CACHE_PREFIX = 'remigi-lab-';
+const CACHE = `${CACHE_PREFIX}v1`;
 const APP_SHELL = new URL('./index.html', self.registration.scope).toString();
 
 self.addEventListener('install', () => {
@@ -25,7 +32,11 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     (async () => {
       const names = await caches.keys();
-      await Promise.all(names.filter((name) => name !== CACHE).map((name) => caches.delete(name)));
+      await Promise.all(
+        names
+          .filter((name) => name.startsWith(CACHE_PREFIX) && name !== CACHE)
+          .map((name) => caches.delete(name)),
+      );
       await self.clients.claim();
     })(),
   );

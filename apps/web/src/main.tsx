@@ -1,15 +1,14 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App';
-import { migrateOldStorage } from './storage/migrate';
 import './styles.css';
 
-// Abans de res: si hi ha dades desades amb el nom antic del joc, es migren.
-try {
-  migrateOldStorage(window.localStorage);
-} catch {
-  // Sense localStorage el joc funciona igual, en memòria.
-}
+/*
+ * Aquí el joc de producció hi tenia la migració de les claus velles
+ * (`rummikub:*` → `remigi:*`). Al laboratori no hi és a posta: aquest clon
+ * desa dins del seu propi espai de noms (`storage/namespace.ts`) i no ha
+ * d'escriure mai a les claus del Remigi de debò, amb qui comparteix origen.
+ */
 
 /*
  * A l'app instal·lada, el gest d'enrere d'Android tancaria el joc a mitja
