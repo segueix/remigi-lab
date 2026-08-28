@@ -2,8 +2,9 @@ import { expect, test } from '@playwright/test';
 
 /**
  * El que ha de complir el build tal com es publica: rutes correctes sota
- * `/remigi/`, dades d'instal·lació com a aplicació, i poder jugar sense
- * connexió un cop visitat.
+ * `/remigi/`, dades d'instal·lació com a aplicació, i funcionar sense
+ * connexió un cop visitat. En aquest clon, l'entrada per defecte és el
+ * laboratori (Remigi AI Lab); la partida humana continua a `#joc`.
  */
 
 test('tots els fitxers pengen de la ruta publicada', async ({ page }) => {
@@ -13,8 +14,8 @@ test('tots els fitxers pengen de la ruta publicada', async ({ page }) => {
   });
 
   await page.goto('./');
-  // L'app entra directament a la partida.
-  await expect(page.locator('.rack .tile').first()).toBeVisible();
+  // L'app entra directament al laboratori.
+  await expect(page.locator('.lab-motors')).toBeVisible();
 
   const src = await page.locator('script[type=module]').first().getAttribute('src');
   expect(src, 'el codi ha de penjar de /remigi/').toContain('/remigi/assets/');
@@ -31,7 +32,7 @@ test('es pot instal·lar com a aplicació', async ({ page, request }) => {
   expect(resposta.ok()).toBe(true);
 
   const manifest = await resposta.json();
-  expect(manifest.name).toBe('Remigi');
+  expect(manifest.name).toBe('Remigi AI Lab');
   expect(manifest.display).toBe('standalone');
   expect(manifest.icons.length).toBeGreaterThanOrEqual(2);
 
@@ -43,19 +44,19 @@ test('es pot instal·lar com a aplicació', async ({ page, request }) => {
   }
 });
 
-test('registra el service worker i deixa jugar sense connexió', async ({ page, context }) => {
+test('registra el service worker i funciona sense connexió', async ({ page, context }) => {
   await page.goto('./');
   await page.waitForFunction(() => navigator.serviceWorker?.controller !== null, null, {
     timeout: 15_000,
   });
 
   // Es visita una vegada amb connexió perquè es desi tot...
-  await expect(page.locator('.rack .tile').first()).toBeVisible();
+  await expect(page.locator('.lab-motors')).toBeVisible();
 
-  // ...i llavors es talla i s'ha de poder continuar jugant igualment.
+  // ...i llavors es talla i el laboratori s'ha d'obrir igualment.
   await context.setOffline(true);
   await page.reload();
-  await expect(page.locator('.rack .tile').first()).toBeVisible();
+  await expect(page.locator('.lab-motors')).toBeVisible();
 
   await context.setOffline(false);
 });

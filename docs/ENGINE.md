@@ -246,15 +246,12 @@ cd packages/core && UPDATE_ENGINE_BASELINE=1 npx vitest run test/engineRegressio
 
 i el canvi de comportament queda assumit i visible al diff del fixture.
 
-## Preparat per al futur laboratori
+## El laboratori que hi ha a sobre
 
-La frontera ja permet, sense tocar l'app, el pas següent quan toqui:
-
-- empaquetar dues versions (`champion-engine.js` vs `challenger-engine.js`)
-  amb el mateix `npm run build:engine` des de dos commits;
-- fer-les jugar l'una contra l'altra amb Node pelat (com fa
-  `scripts/engine-smoke.mjs`), amb les mateixes llavors per a un duel just;
-- comparar-les per `ENGINE_VERSION` i pel diagnòstic de cada decisió.
-
-Res d'això no està implementat encara — només l'arquitectura que ho fa
-possible.
+Aquesta frontera és la que fa possible el **Remigi AI Lab**
+([`docs/AI-LAB.md`](AI-LAB.md)): la capa `src/lab/` fa jugar dos motors l'un
+contra l'altre (partides visibles, torneigs, jeroglífics, informes) parlant
+**només** amb aquesta API — cap peça del laboratori no importa `ai/`. El
+catàleg de versions comparables és `src/lab/catalog.ts`, i un motor empaquetat
+a part (`engine-v2.js`) s'hi connecta amb una `factory` que retorni aquesta
+mateixa interfície `RemigiEngine`.

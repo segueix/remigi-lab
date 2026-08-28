@@ -1,6 +1,7 @@
 import { suggestOpponents } from '@remigi/core';
 import { useEffect, useState } from 'react';
 import type { GameSetup } from './game/useGame';
+import { LabScreen } from './lab/LabScreen';
 import { GameScreen } from './screens/GameScreen';
 import { StatsScreen } from './screens/StatsScreen';
 import { useProfile } from './state/useProfile';
@@ -10,12 +11,27 @@ import { useSavedGame } from './state/useSavedGame';
 export type Screen = 'game' | 'stats';
 
 /**
- * L'app entra directament a la taula de joc: si hi ha una partida a mig jugar
- * es continua, i si no se'n reparteix una de nova amb els rivals que toquen
- * per l'habilitat del perfil. Tot el que abans era la pantalla d'inici (nom,
- * rivals, historial, com es juga) viu ara al menú del teu jugador.
+ * Aquest repositori és el clon-laboratori del Remigi: la pantalla principal és
+ * el **Remigi AI Lab** (Motor A vs Motor B). La partida humana de sempre es
+ * conserva sencera a `#joc`, i des del laboratori s'hi entra amb un botó.
  */
+type Mode = 'lab' | 'joc';
+
+function initialMode(): Mode {
+  return window.location.hash.includes('joc') ? 'joc' : 'lab';
+}
+
+/** Canvia l'adreça sense apilar historial (el gest d'enrere no hi ha de tornar). */
+function replaceHash(hash: string): void {
+  try {
+    history.replaceState(null, '', `#${hash}`);
+  } catch {
+    // Sense historial modificable, el mode canvia igualment.
+  }
+}
+
 export function App() {
+  const [mode, setMode] = useState<Mode>(initialMode);
   const [screen, setScreen] = useState<Screen>('game');
   const profile = useProfile();
   const savedGame = useSavedGame();
@@ -28,8 +44,19 @@ export function App() {
    */
   const { loading: profileLoading, profile: loadedProfile, setName } = profile;
   useEffect(() => {
-    if (!profileLoading && !loadedProfile) void setName('Jugador');
-  }, [profileLoading, loadedProfile, setName]);
+    if (mode === 'joc' && !profileLoading && !loadedProfile) void setName('Jugador');
+  }, [mode, profileLoading, loadedProfile, setName]);
+
+  if (mode === 'lab') {
+    return (
+      <LabScreen
+        onPlayHuman={() => {
+          replaceHash('joc');
+          setMode('joc');
+        }}
+      />
+    );
+  }
 
   if (profile.loading || savedGame.loading || !profile.profile) {
     return (
@@ -64,6 +91,10 @@ export function App() {
           profile={profile}
           savedGame={savedGame}
           onHistory={() => setScreen('stats')}
+          onLab={() => {
+            replaceHash('lab');
+            setMode('lab');
+          }}
           tileStyle={tileStyle}
           onTileStyle={setTileStyle}
         />

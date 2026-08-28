@@ -25,6 +25,8 @@ interface Props {
   onJeroglifics(): void;
   onNewGame(setup: GameSetup): void;
   onHistory(): void;
+  /** Torna al Remigi AI Lab (només en aquest clon-laboratori). */
+  onLab?(): void;
   onClose(): void;
 }
 
@@ -45,6 +47,7 @@ export function PlayerMenu({
   onJeroglifics,
   onNewGame,
   onHistory,
+  onLab,
   onClose,
 }: Props) {
   const [name, setName] = useState(profile.profile?.name ?? '');
@@ -218,6 +221,11 @@ export function PlayerMenu({
           {jeroglifics >= MIN_JEROGLIFICS && (
             <button className="secondary" onClick={onJeroglifics}>
               Jeroglífics ({jeroglifics})
+            </button>
+          )}
+          {onLab && (
+            <button className="secondary" onClick={onLab}>
+              Laboratori de motors
             </button>
           )}
         </div>
