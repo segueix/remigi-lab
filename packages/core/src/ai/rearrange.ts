@@ -1,4 +1,4 @@
-import { COLORS, MAX_GROUP_SIZE, MAX_VALUE, MIN_MELD_SIZE } from '../core/constants';
+import { COLORS, JOKER_PENALTY_POINTS, MAX_GROUP_SIZE, MAX_VALUE, MIN_MELD_SIZE } from '../core/constants';
 import { isJoker } from '../core/tiles';
 import type { Meld, Tile } from '../core/types';
 
@@ -46,6 +46,12 @@ export interface RearrangeOptions {
    */
   maxNodes?: number;
   /**
+   * Desempat per punts: entre repartiments que es queden el MATEIX nombre de
+   * fitxes a la mà, prefereix quedar-se les de menys valor pendent. No canvia
+   * mai quantes fitxes es col·loquen, només quines es queden.
+   */
+  preferPoints?: boolean;
+  /**
    * Sortida de diagnòstic: si es passa, s'hi escriuen els nodes explorats i si
    * la cerca ha tocat el sostre. No canvia cap decisió.
    */
@@ -61,12 +67,23 @@ export interface RearrangeStats {
 
 const DEFAULT_MAX_NODES = 120_000;
 
+/*
+ * Amb el desempat per punts, el cost passa a ser compost:
+ * fitxes_quedades · KEEP_UNIT + punts_quedats. Com que els punts d'una mà mai
+ * no s'acosten a KEEP_UNIT, minimitzar el cost compost minimitza primer les
+ * fitxes (exactament com abans) i, només en cas d'empat, els punts.
+ */
+const KEEP_UNIT = 10_000;
+
 export function bestRearrangement(
   board: Meld[],
   rack: Tile[],
   options: RearrangeOptions = {},
 ): RearrangeResult | null {
   const maxNodes = options.maxNodes ?? DEFAULT_MAX_NODES;
+  // Cost de quedar-se una fitxa a la mà: 1 (comptar fitxes) o compost.
+  const keepCost = (slot: number) => (options.preferPoints ? KEEP_UNIT + valueOf(slot) : 1);
+  const jokerKeepCost = options.preferPoints ? KEEP_UNIT + JOKER_PENALTY_POINTS : 1;
 
   // Reserves de fitxes de debò per casella, amb les de la taula al davant: com
   // que totes les de la taula s'han de tornar a col·locar, gastar-les primer
@@ -113,7 +130,7 @@ export function bestRearrangement(
 
     if (slot >= SLOTS) {
       // Els jokers de la taula també s'han de tornar a col·locar tots.
-      return jokersLeft > rackJokers ? null : { cost: jokersLeft, melds: [] };
+      return jokersLeft > rackJokers ? null : { cost: jokersLeft * jokerKeepCost, melds: [] };
     }
     if (remaining[slot] === 0) return solve(slot + 1, jokersLeft);
 
@@ -128,7 +145,7 @@ export function bestRearrangement(
       remaining[slot]--;
       const rest = solve(slot, jokersLeft);
       remaining[slot]++;
-      if (rest) best = { cost: rest.cost + 1, melds: rest.melds };
+      if (rest) best = { cost: rest.cost + keepCost(slot), melds: rest.melds };
     }
 
     for (const meld of meldsStartingAt(slot, remaining, jokersLeft)) {
@@ -158,7 +175,8 @@ export function bestRearrangement(
   }
   if (!solution || exhausted) return null;
 
-  const tilesUsed = rack.length - solution.cost;
+  const keptTiles = options.preferPoints ? Math.floor(solution.cost / KEEP_UNIT) : solution.cost;
+  const tilesUsed = rack.length - keptTiles;
   if (tilesUsed <= 0) return null;
 
   return { board: buildBoard(solution.melds, pool, jokerPool), tilesUsed };

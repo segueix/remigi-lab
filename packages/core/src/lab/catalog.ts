@@ -121,10 +121,22 @@ export const ENGINE_CATALOG: EngineSpec[] = [
     strategy: 'voraç + reordenació completa',
     engineVersion: ENGINE_VERSION,
     description:
-      'Challenger de pressupost: el sostre de cerca a 1.000.000 de nodes, el doble del Campió. Hipòtesi a contrastar: si la corba 30k→120k→500k ja s’aplana, no guanyarà clarament i la via dels nodes queda tancada. Pendent d’executar (cribratge llavor 42, confirmació llavor 9000).',
+      'VIA TANCADA (2026-08-28): 508–492 en 1.000 partides aparellades — a mig sigma de l’empat. La corba de nodes s’amortitza a 500k: doblar el pressupost ja no compra jugades millors. Es conserva per reproduir l’experiment.',
     color: '#c4b5fd',
     role: 'challenger',
     config: { level: 'expert', maxNodes: 1_000_000 },
+  },
+  {
+    id: 'challenger-punts',
+    name: 'Challenger Punts',
+    version: '1.1.0+punts',
+    strategy: 'voraç + reordenació completa + desempat per punts',
+    engineVersion: ENGINE_VERSION,
+    description:
+      'Primera hipòtesi estratègica: a igualtat de fitxes jugades, tria la jugada que es desfà de més punts i es queda a la mà les fitxes barates (els 13 i els jokers costen car en perdre). Mateix pressupost de cerca que el Campió. Pendent d’executar (cribratge llavor 42, confirmació llavor 11000).',
+    color: '#f472b6',
+    role: 'challenger',
+    config: { level: 'expert', overrides: { preferPointsTieBreak: true } },
   },
   {
     id: 'advanced-v1',
@@ -235,6 +247,7 @@ export function engineSpecDiff(a: EngineSpec, b: EngineSpec): EngineSpecDifferen
     'extendsBoard',
     'usesJokers',
     'rearrangesTable',
+    'preferPointsTieBreak',
     'maxNodes',
   ];
   const labels: Record<string, string> = {
@@ -243,6 +256,7 @@ export function engineSpecDiff(a: EngineSpec, b: EngineSpec): EngineSpecDifferen
     extendsBoard: 'extendsBoard',
     usesJokers: 'usesJokers',
     rearrangesTable: 'rearrangesTable',
+    preferPointsTieBreak: 'preferPointsTieBreak',
     maxNodes: 'maxNodes',
   };
   for (const key of keys) {

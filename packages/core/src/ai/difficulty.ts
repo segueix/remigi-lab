@@ -26,6 +26,13 @@ export interface AiParams {
    * `maxNodes` explícit sempre hi mana per sobre.
    */
   maxNodes?: number;
+  /**
+   * Desempat per punts: a igualtat de fitxes jugades, desfer-se de més punts
+   * i quedar-se a la mà les fitxes barates (els 13 i els jokers costen car si
+   * la partida es perd). Apagat per defecte a tots els nivells: és una
+   * hipòtesi del laboratori (challenger-punts) pendent de confirmar.
+   */
+  preferPointsTieBreak?: boolean;
 }
 
 export const DIFFICULTIES: Record<DifficultyKey, AiParams> = {
