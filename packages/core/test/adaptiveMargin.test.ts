@@ -25,7 +25,12 @@ describe('marge del resultat', () => {
 });
 
 describe('la valoració té en compte el marge', () => {
-  const profile = createProfile('u1', 'Anna');
+  // L'Elo per marge s'aplica un cop acabada la calibració inicial.
+  const profile = {
+    ...createProfile('u1', 'Anna'),
+    adaptiveStep: 3,
+    adaptiveCalibrating: false,
+  };
 
   it('guanyar de pallissa puja més que guanyar per poc', () => {
     const ajustada = recordGame(profile, [...RIVALS], { won: true, margin: 0 });

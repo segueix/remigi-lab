@@ -20,10 +20,11 @@ import {
  * un artefacte propi (`engine-v2.js`), donar-li una `factory` que
  * l'instanciï amb la mateixa interfície `RemigiEngine`.
  *
- * El Campió vigent és `expert-v2` (promoció del Challenger 500k, confirmada
- * amb 1.000 partides: vegeu AI_REPORT.md i AGENT.md). `expert-v1` es conserva
- * per sempre com a línia de base: és l'Expert d'abans de la refactorització,
- * congelat a 120.000 nodes, contra qui es mesura tota la història.
+ * `expert-v1` és la línia de base: l'Expert de producció tal com és (motor
+ * sincronitzat amb `segueix/remigi`, 120.000 nodes). El Campió vigent és
+ * `expert-v2` (Challenger 500k promocionat el 2026-08-28; vegeu AI_REPORT.md i
+ * AGENT.md), però aquell resultat es va mesurar contra l'Expert anterior a la
+ * sincronització i s'ha de refer.
  */
 
 export interface EngineConfigSpec {
@@ -74,7 +75,7 @@ export const ENGINE_CATALOG: EngineSpec[] = [
     strategy: 'voraç + reordenació completa',
     engineVersion: ENGINE_VERSION,
     description:
-      'El Campió vigent: la mateixa cerca que l’Expert v1 amb el sostre de reordenació a 500.000 nodes. Promocionat del Challenger 500k després de guanyar 557–443 (55,7%) en 1.000 partides aparellades.',
+      'El Campió vigent: la mateixa cerca que l’Expert v1 amb el sostre de reordenació a 500.000 nodes. Va guanyar 557–443 (55,7%) en 1.000 partides aparellades, però contra l’Expert anterior a la sincronització amb producció (motor 1.1.0): cal tornar-ho a mesurar contra l’Expert 1.5.0.',
     color: '#2dd4bf',
     role: 'champion',
     config: { level: 'expert', maxNodes: 500_000 },
@@ -86,7 +87,7 @@ export const ENGINE_CATALOG: EngineSpec[] = [
     strategy: 'voraç + reordenació completa',
     engineVersion: ENGINE_VERSION,
     description:
-      'El Campió anterior i la línia de base de la regressió: cerca voraç, extensions i reordenació completa amb sostre de 120.000 nodes, congelat per sempre tal com jugava abans d’encapsular el motor.',
+      'La línia de base: l’Expert de producció (motor 1.5.0): cerca voraç, extensions, reordenació completa amb sostre de 120.000 nodes i política de jokers dels rivals. És el que fixa el baseline de regressió i contra qui es mesura tot.',
     color: '#94a3b8',
     config: { level: 'expert', maxNodes: 120_000 },
   },
@@ -136,7 +137,7 @@ export const ENGINE_CATALOG: EngineSpec[] = [
       'MASSA ESTRET (2026-08-28): la idea és bona però gairebé mai no s’activa — la sonda (--probe) el mesura en l’1,1% de les jugades, i quan hi actua es treu 6,8 punts pendents de més. Torneig contra el Campió: 49–51, soroll. El pas següent seria eixamplar-lo (canviar una fitxa per punts), no descartar-lo.',
     color: '#f472b6',
     role: 'challenger',
-    config: { level: 'expert', overrides: { preferPointsTieBreak: true } },
+    config: { level: 'expert', maxNodes: 500_000, overrides: { preferPointsTieBreak: true } },
   },
   {
     id: 'advanced-v1',

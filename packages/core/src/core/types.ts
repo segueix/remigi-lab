@@ -72,4 +72,6 @@ export interface GameConfig {
   /** Entre 2 i 4 jugadors (1 humà + 1..3 IA en l'ús normal). */
   players: PlayerSetup[];
   seed?: number;
+  /** Índex del jugador que fa el primer torn (per defecte, el 0). */
+  firstPlayer?: number;
 }

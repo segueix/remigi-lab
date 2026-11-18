@@ -25,10 +25,17 @@ export const MIN_MELD_SIZE = 3;
 /** Un grup no pot repetir color, per tant com a màxim té 4 fitxes. */
 export const MAX_GROUP_SIZE = 4;
 
-/** Noms dels colors per a la interfície en català. */
+/**
+ * Noms dels colors per a la interfície en català.
+ *
+ * El quart color es diu **groc**: la clau interna continua sent `orange`
+ * perquè és la que hi ha desada a les partides i als perfils de tothom, i
+ * canviar-la no faria el joc ni un pèl més groc; el que es veu i el que es
+ * llegeix, sí.
+ */
 export const COLOR_LABELS: Record<TileColor, string> = {
   red: 'vermell',
   blue: 'blau',
   black: 'negre',
-  orange: 'taronja',
+  orange: 'groc',
 };

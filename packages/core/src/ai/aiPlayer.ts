@@ -1,6 +1,6 @@
 import type { Rng } from '../core/random';
 import type { GameState, Move } from '../core/types';
-import { difficultyByKey, type AiParams } from './difficulty';
+import { difficultyByKey, withOverrides, type AiParams } from './difficulty';
 import { chooseBestPlay, type SearchStats } from './solver';
 
 /** Paràmetres d'IA del jugador (segons el seu `aiLevel`, o el nivell per defecte). */
@@ -35,11 +35,24 @@ export interface AiDecisionStats extends SearchStats {
 /** Com de lluny pot arribar l'ajust dins de la partida. */
 const RUBBER_BAND_PER_TILE = 0.03;
 const RUBBER_BAND_MAX_MISTAKE = 0.5;
+const RUBBER_BAND_REARRANGE_PER_TILE = 0.25;
+
+/**
+ * Quantes fitxes més que el bot li queden al jugador humà que va millor
+ * (negatiu si l'humà va per davant), o null si a la taula no hi ha cap humà.
+ */
+function humanDeficit(state: GameState, playerIndex: number): number | null {
+  const humanRacks = state.players.filter((p) => p.kind === 'human').map((p) => p.rack.length);
+  if (humanRacks.length === 0) return null;
+  return Math.min(...humanRacks) - state.players[playerIndex].rack.length;
+}
+
+const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
 /**
  * Probabilitat d'error ajustada a com va la partida: si el jugador humà va
  * endarrerit (li queden més fitxes), el bot s'equivoca una mica més; si va
- * avançat, afina. Serveix per suavitzar les ratxes sense canviar de nivell.
+ * avançat, afina. És el que suavitza els nivells baixos, que no reordenen.
  *
  * Sense cap jugador humà a la taula no hi ha res a suavitzar.
  */
@@ -48,21 +61,40 @@ export function rubberBandedMistakeRate(
   playerIndex: number,
   baseMistakeRate: number,
 ): number {
-  const humanRacks = state.players.filter((p) => p.kind === 'human').map((p) => p.rack.length);
-  if (humanRacks.length === 0) return baseMistakeRate;
+  const behind = humanDeficit(state, playerIndex);
+  if (behind === null) return baseMistakeRate;
+  return clamp(baseMistakeRate + behind * RUBBER_BAND_PER_TILE, 0, RUBBER_BAND_MAX_MISTAKE);
+}
 
-  const behind = Math.min(...humanRacks) - state.players[playerIndex].rack.length;
-  const adjusted = baseMistakeRate + behind * RUBBER_BAND_PER_TILE;
-  return Math.min(RUBBER_BAND_MAX_MISTAKE, Math.max(0, adjusted));
+/**
+ * Proporció de torns amb reordenació ajustada a com va la partida: és el que
+ * de debò iguala els nivells alts, perquè «no veure» una jugada gairebé no
+ * afebleix un bot que reordena (la recupera el torn següent). Si l'humà va
+ * endarrerit, el bot reordena menys sovint; si va avançat, més. Només afecta
+ * els nivells que saben reordenar.
+ *
+ * Sense cap jugador humà a la taula no hi ha res a suavitzar.
+ */
+export function rubberBandedRearrangeRate(
+  state: GameState,
+  playerIndex: number,
+  baseRearrangeRate: number,
+): number {
+  const behind = humanDeficit(state, playerIndex);
+  if (behind === null) return baseRearrangeRate;
+  return clamp(baseRearrangeRate - behind * RUBBER_BAND_REARRANGE_PER_TILE, 0, 1);
 }
 
 /**
  * Decideix el moviment d'un jugador IA. El nivell de dificultat limita el
- * cercador (jokers, extensions, reordenació de la taula) i hi afegeix una
- * probabilitat d'error humà: "no veure" la jugada i robar fitxa.
+ * cercador (jokers, extensions i, en una part dels torns, reordenació de la
+ * taula) i hi afegeix una probabilitat d'error humà: "no veure" la jugada i
+ * robar fitxa.
  *
  * `rng` permet passar un generador amb llavor perquè les partides siguin
- * reproduïbles; per defecte fa servir Math.random.
+ * reproduïbles; per defecte fa servir Math.random. Amb una proporció de
+ * reordenació de 0 o d'1 no se'n tira cap dau, així que el nivell expert
+ * consumeix el RNG exactament com abans que existís.
  */
 export function decideAiMove(
   state: GameState,
@@ -70,11 +102,12 @@ export function decideAiMove(
   rng: Rng = Math.random,
   options: AiMoveOptions = {},
 ): Move {
-  const params = { ...aiParamsForPlayer(state, playerIndex), ...options.overrides };
+  const params = withOverrides(aiParamsForPlayer(state, playerIndex), options.overrides);
   const best = chooseBestPlay(state, playerIndex, {
-    allowJokers: params.usesJokers,
-    allowExtensions: params.extendsBoard,
-    allowRearrange: params.rearrangesTable,
+    limitJokers: true,
+    allowJokers: params.usesJokers && rollRate(params.jokerRate ?? 1, rng),
+    allowExtensions: params.extendsBoard && rollRate(params.extensionRate ?? 1, rng),
+    allowRearrange: params.rearrangesTable && rollRearrange(state, playerIndex, rng, params, options),
     maxNodes: options.maxNodes ?? params.maxNodes,
     preferPointsTieBreak: params.preferPointsTieBreak,
     stats: options.stats,
@@ -87,4 +120,24 @@ export function decideAiMove(
     : params.mistakeRate;
   if (rng() < mistakeRate) return { type: 'draw' };
   return { type: 'play', board: best.board };
+}
+
+/** Decideix si aquest torn el bot fa servir la reordenació de la taula. */
+function rollRearrange(
+  state: GameState,
+  playerIndex: number,
+  rng: Rng,
+  params: AiParams,
+  options: AiMoveOptions,
+): boolean {
+  const base = params.rearrangeRate;
+  const rate = options.rubberBanding ? rubberBandedRearrangeRate(state, playerIndex, base) : base;
+  if (rate >= 1) return true;
+  if (rate <= 0) return false;
+  return rng() < rate;
+}
+
+/** Els extrems no consumeixen RNG: els nivells fixos conserven les decisions. */
+function rollRate(rate: number, rng: Rng): boolean {
+  return rate >= 1 || (rate > 0 && rng() < rate);
 }

@@ -28,6 +28,7 @@ describe('taula de nivells de dificultat', () => {
       expect(Number(stronger.extendsBoard)).toBeGreaterThanOrEqual(Number(weaker.extendsBoard));
       expect(Number(stronger.usesJokers)).toBeGreaterThanOrEqual(Number(weaker.usesJokers));
       expect(Number(stronger.rearrangesTable)).toBeGreaterThanOrEqual(Number(weaker.rearrangesTable));
+      expect(stronger.rearrangeRate).toBeGreaterThanOrEqual(weaker.rearrangeRate);
     }
   });
 
@@ -37,6 +38,15 @@ describe('taula de nivells de dificultat', () => {
       expect(params.label.length).toBeGreaterThan(0);
       expect(params.mistakeRate).toBeGreaterThanOrEqual(0);
       expect(params.mistakeRate).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it('la proporció de reordenació és entre 0 i 1, i només és positiva si en sap', () => {
+    for (const key of DIFFICULTY_ORDER) {
+      const params = DIFFICULTIES[key];
+      expect(params.rearrangeRate).toBeGreaterThanOrEqual(0);
+      expect(params.rearrangeRate).toBeLessThanOrEqual(1);
+      expect(params.rearrangeRate > 0).toBe(params.rearrangesTable);
     }
   });
 });

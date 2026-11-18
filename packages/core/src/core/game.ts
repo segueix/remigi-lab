@@ -24,6 +24,10 @@ export function createGame(config: GameConfig): GameState {
   if (config.players.length < 2 || config.players.length > 4) {
     throw new RulesError('BAD_PLAYER_COUNT', 'calen entre 2 i 4 jugadors');
   }
+  const firstPlayer = config.firstPlayer ?? 0;
+  if (!Number.isInteger(firstPlayer) || firstPlayer < 0 || firstPlayer >= config.players.length) {
+    throw new RulesError('BAD_FIRST_PLAYER', 'el jugador que comença no existeix');
+  }
   const seed = config.seed ?? randomSeed();
   const bag = shuffledBag(seed);
   const players: PlayerState[] = config.players.map((setup, i) => ({
@@ -39,7 +43,7 @@ export function createGame(config: GameConfig): GameState {
     bag: bag.slice(players.length * INITIAL_RACK_SIZE),
     board: [],
     players,
-    currentPlayer: 0,
+    currentPlayer: firstPlayer,
     turn: 1,
     consecutivePasses: 0,
     status: 'playing',

@@ -323,9 +323,27 @@ hi cap: l'espec admet una `factory` pròpia que retorni la interfície
   interfície els compara com qualsevol A/B. El Campió vigent és **`expert-v2`**
   (500.000 nodes), promocionat del Challenger 500k el 2026-08-28 després de
   guanyar **557–443** en 1.000 partides aparellades amb llavor independent
-  (vegeu `AI_REPORT.md`). `expert-v1` (120.000 nodes) queda **congelat per
-  sempre com a referència**: és l'Expert d'abans d'encapsular el motor, fixat
-  pel test de regressió, contra qui es mesura tota la història.
+  (vegeu `AI_REPORT.md`) — **contra l'Expert anterior a la sincronització amb
+  producció, així que el resultat s'ha de refer** (vegeu AGENT.md, «Sincronització
+  amb producció»). `expert-v1` (120.000 nodes) és la **línia de base: l'Expert
+  de producció tal com és**, fixat pel test de regressió.
+
+### Mantenir el motor sincronitzat amb producció
+
+`packages/core/src/{core,ai,engine,adaptive}` ha de ser el de `segueix/remigi`
+més només les **extensions declarades del laboratori** (camps opcionals d'`AiParams`
+apagats per defecte: `maxNodes`, `preferPointsTieBreak`, i el seu suport a
+`solver.ts`/`rearrange.ts`/`aiPlayer.ts`). Els dos repositoris comparteixen
+història, així que es sincronitza amb una fusió de tres vies limitada al motor:
+
+```bash
+git fetch https://github.com/segueix/remigi main:prod-main
+git merge --no-commit --no-ff prod-main
+# restaura el que no és packages/core (web, docs, CI) i resol els conflictes del motor
+npm run typecheck && npm test
+```
+
+Cap canvi del laboratori no es porta a producció automàticament.
 - Quan un Challenger demostri ser millor (torneigs grans, llavors aparellades,
   diferència clara), el camí a producció és:
   1. `npm run build:engine` → `packages/core/dist/remigi-engine.js` (el motor

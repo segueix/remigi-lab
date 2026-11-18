@@ -6,14 +6,25 @@
  *   npm run simulate -- --seed 7         # una altra llavor inicial
  *   npm run simulate -- --no-rearrange   # expert sense reordenació de taula
  *   npm run simulate -- --duel 200       # expert nou contra expert antic
+ *   npm run simulate -- --ladder 200     # duels entre cada nivell i el següent
+ *   npm run simulate -- --rubber 200     # «humà» d'Avançat contra dos experts, amb ajust i sense
  *
  * Les jugades es demanen a l'API pública del motor (engine/), la mateixa que fa
  * servir l'app: el que es mesura aquí és exactament el que jugarà la web.
  * A cada torn es comprova l'invariant de conservació: sac + taula + mans = 106,
  * i es recull el temps i els nodes de cada decisió del jugador mesurat.
  */
-import { ENGINE_VERSION, TOTAL_TILES, applyMove, createEngine, createGame, finalScores } from '../engine';
-import type { GameState } from '../engine';
+import {
+  DIFFICULTIES,
+  DIFFICULTY_ORDER,
+  ENGINE_VERSION,
+  TOTAL_TILES,
+  applyMove,
+  createEngine,
+  createGame,
+  finalScores,
+} from '../engine';
+import type { DifficultyKey, GameState } from '../engine';
 
 const MAX_TURNS = 1000;
 
@@ -124,11 +135,94 @@ function duel(games: number, baseSeed: number): void {
   console.log(`  Temps de decisió sense:           ${summariseTiming(timingOld)}`);
 }
 
+/**
+ * Partida amb nivells i tipus de jugador a mida (sense mesures de temps). Un
+ * jugador `human` el juga igualment el motor al seu nivell: serveix per veure
+ * què fa l'ajust dins de la partida, que només mira els humans.
+ */
+function playCustom(
+  seed: number,
+  players: { name: string; level: DifficultyKey; human?: boolean }[],
+  rubberBanding = false,
+): GameState {
+  let state = createGame({
+    seed,
+    players: players.map((p) => ({ name: p.name, kind: 'ai' as const, aiLevel: p.level })),
+  });
+  state = {
+    ...state,
+    players: state.players.map((p, i) => (players[i].human ? { ...p, kind: 'human' as const } : p)),
+  };
+  const engine = createEngine({ seed: seed + 1 });
+  while (state.status === 'playing' && state.turn <= MAX_TURNS) {
+    const player = state.currentPlayer;
+    const bot = state.players[player].kind !== 'human';
+    state = applyMove(state, engine.play(state, { playerIndex: player, rubberBanding: bot && rubberBanding }).move);
+  }
+  if (state.status !== 'finished') {
+    throw new Error(`La partida amb llavor ${seed} no ha acabat en ${MAX_TURNS} torns`);
+  }
+  return state;
+}
+
+const winnerName = (state: GameState) => state.players.find((p) => p.id === state.winnerId)?.name;
+
+/** Duels a dos entre cada nivell i el següent, alternant qui comença. */
+function ladder(games: number, baseSeed: number): void {
+  console.log(`Escala de nivells (${games} duels per parella, alternant qui comença):`);
+  for (let i = 1; i < DIFFICULTY_ORDER.length; i++) {
+    const weak = DIFFICULTIES[DIFFICULTY_ORDER[i - 1]];
+    const strong = DIFFICULTIES[DIFFICULTY_ORDER[i]];
+    let strongWins = 0;
+    for (let g = 0; g < games; g++) {
+      const pair = [
+        { name: strong.label, level: strong.key },
+        { name: weak.label, level: weak.key },
+      ];
+      if (g % 2 === 1) pair.reverse();
+      if (winnerName(playCustom(baseSeed + g * 1000, pair)) === strong.label) strongWins++;
+    }
+    const expected = 100 / (1 + 10 ** ((weak.rating - strong.rating) / 400));
+    console.log(
+      `  ${strong.label.padEnd(8)} contra ${weak.label.padEnd(8)} ${String(Math.round((100 * strongWins) / games)).padStart(3)}%` +
+        `  (l'Elo n'espera ${Math.round(expected)}%)`,
+    );
+  }
+}
+
+/**
+ * El cas que va motivar l'ajust de la reordenació: un jugador que juga com
+ * l'Avançat, marcat com a humà, contra dos experts, amb l'ajust i sense.
+ */
+function rubber(games: number, baseSeed: number): void {
+  console.log(`«Humà» d'Avançat contra dos experts (${games} partides, rotant qui comença):`);
+  for (const rubberBanding of [false, true]) {
+    let wins = 0;
+    for (let g = 0; g < games; g++) {
+      const table = [
+        { name: 'Humà', level: 'advanced' as const, human: true },
+        { name: 'Expert A', level: 'expert' as const },
+        { name: 'Expert B', level: 'expert' as const },
+      ];
+      const rotated = [...table.slice(g % 3), ...table.slice(0, g % 3)];
+      if (winnerName(playCustom(baseSeed + g * 1000, rotated, rubberBanding)) === 'Humà') wins++;
+    }
+    console.log(
+      `  ${rubberBanding ? 'Amb ajust ' : 'Sense ajust'}: l'humà guanya el ${Math.round((100 * wins) / games)}%` +
+        ' (a parts iguals seria el 33%)',
+    );
+  }
+}
+
 function main(): void {
   console.log(`Motor remigi-engine v${ENGINE_VERSION}\n`);
   const baseSeed = argValue('seed', 42);
   const duelGames = argValue('duel', 0);
   if (duelGames > 0) return duel(duelGames, baseSeed);
+  const ladderGames = argValue('ladder', 0);
+  if (ladderGames > 0) return ladder(ladderGames, baseSeed);
+  const rubberGames = argValue('rubber', 0);
+  if (rubberGames > 0) return rubber(rubberGames, baseSeed);
 
   const games = argValue('games', 20);
   const rearrange = !hasFlag('no-rearrange');

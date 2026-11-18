@@ -33,6 +33,17 @@ describe('creació de partida', () => {
     expect(state.status).toBe('playing');
   });
 
+  it('comença el jugador indicat, o el primer si no se n’indica cap', () => {
+    const players = [
+      { name: 'Tu', kind: 'human' as const },
+      { name: 'Bot 1', kind: 'ai' as const, aiLevel: 'medium' as const },
+      { name: 'Bot 2', kind: 'ai' as const, aiLevel: 'easy' as const },
+    ];
+    expect(createGame({ seed: 1, players }).currentPlayer).toBe(0);
+    expect(createGame({ seed: 1, players, firstPlayer: 2 }).currentPlayer).toBe(2);
+    expectRulesError(() => createGame({ seed: 1, players, firstPlayer: 3 }), 'BAD_FIRST_PLAYER');
+  });
+
   it('rebutja menys de 2 o més de 4 jugadors', () => {
     expectRulesError(() => createGame({ players: [{ name: 'Sol', kind: 'human' }] }), 'BAD_PLAYER_COUNT');
   });

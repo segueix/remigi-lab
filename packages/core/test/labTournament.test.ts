@@ -165,7 +165,7 @@ describe('torneig Motor A vs Motor B', () => {
     const result = runTournament({ engineA: 'easy-v1', engineB: 'rookie-v1', games: 2, baseSeed: 9 });
     const roundTrip = JSON.parse(JSON.stringify(result)) as TournamentResult;
     expect(roundTrip.engineA.id).toBe('easy-v1');
-    expect(roundTrip.engineA.params.mistakeRate).toBe(0.2);
+    expect(roundTrip.engineA.params.mistakeRate).toBe(0.18);
     expect(withoutTimes(roundTrip)).toEqual(withoutTimes(result));
   });
 });

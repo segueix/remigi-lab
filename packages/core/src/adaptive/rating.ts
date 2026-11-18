@@ -17,3 +17,14 @@ export function expectedScore(a: number, b: number): number {
 export function updateRating(rating: number, opponentRating: number, score: number, k: number): number {
   return Math.round(rating + k * (score - expectedScore(rating, opponentRating)));
 }
+
+/** Probabilitat de guanyar la taula: 1/(n+1) amb n rivals equivalents. */
+export function expectedTableScore(rating: number, opponents: readonly number[]): number {
+  return 1 / (1 + opponents.reduce((sum, rival) => sum + 10 ** ((rival - rating) / 400), 0));
+}
+
+export function updateTableRating(
+  rating: number, opponents: readonly number[], won: boolean, k: number,
+): number {
+  return Math.round(rating + k * ((won ? 1 : 0) - expectedTableScore(rating, opponents)));
+}

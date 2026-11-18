@@ -1792,6 +1792,41 @@ estalvia confirmacions inútils — o pitjor, la conclusió equivocada.
   teníem mesurada. Regla que en queda: **un challenger es mesura sempre
   contra el Campió vigent**, que és qui només difereix en allò que es prova.
 
+### Sincronització amb producció (motor 1.1.0 → 1.5.0) ✅ Feta (2026-11-18)
+
+**Per què**: el laboratori es va bifurcar de producció el 2026-08-28 (motor
+1.1.0) i producció ha continuat (165 commits, motor 1.5.0): `rearrangeRate`,
+`extensionRate`/`jokerRate`, política de jokers dels rivals (`limitJokers`),
+rubber banding també sobre la reordenació, `rating` continu, `firstPlayer`,
+adaptatiu reequilibrat. Sense sincronitzar, els resultats del laboratori no
+es podien portar a producció: mesuraven contra un Expert que ja no existeix.
+
+- [x] Fusió de tres vies de `segueix/remigi@main` limitada a `packages/core`
+      (web, docs i CI del lab, intactes). Ara els dos repos comparteixen
+      història recent, de manera que la propera sincronització és trivial.
+- [x] El nivell `expert` torna a ser **exactament el de producció** (120.000
+      nodes per defecte, `rearrangeRate: 1`). Les extensions del lab
+      (`maxNodes`, `preferPointsTieBreak`) són camps opcionals apagats per
+      defecte i el solver/rearrange amb el desempat per punts es comporta com
+      producció quan està apagat.
+- [x] Baseline de regressió = el de producció. `ENGINE_VERSION` = 1.5.0.
+- [x] Catàleg: `challenger-punts` declara `maxNodes: 500_000` (abans el
+      heretava del nivell) per seguir mesurant una sola variable.
+- [x] `npm run typecheck`, `npm test` (229 + 77), `build:engine` i `smoke:engine` en verd.
+
+**Conseqüència a vigilar**: el Campió `expert-v2` (557–443) i les conclusions de
+1M/Punts es van mesurar contra l'Expert 1.1.0. **Cal tornar-les a mesurar
+contra l'Expert 1.5.0** abans de promocionar res a producció.
+
+### Problemes trobats
+
+- [2026-11-18] El nivell `expert` del lab duia el 500k encastat (la promoció
+  del 28/08), i el merge hi va xocar. Resolt deixant l'`expert` com a producció
+  i mantenint el 500k només com a configuració explícita del catàleg: així el
+  lab no canvia el que mesura "per defecte" sense que sigui una decisió.
+- [2026-11-18] `easy-v1` ara té `mistakeRate` 0,18 (producció l'ha
+  reequilibrat; abans 0,2): s'ha ajustat el test del torneig.
+
 ### El registre antic de l'experiment 1M (substituït pel tancament de dalt)
 
 <details><summary>Registre original, abans dels resultats</summary>

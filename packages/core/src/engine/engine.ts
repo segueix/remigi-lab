@@ -1,5 +1,5 @@
 import { decideAiMove, type AiDecisionStats } from '../ai/aiPlayer';
-import { difficultyByKey, type AiParams, type DifficultyKey } from '../ai/difficulty';
+import { difficultyByKey, difficultyByRating, withOverrides, type AiParams, type DifficultyKey } from '../ai/difficulty';
 import { chooseBestPlay, type PlayCandidate } from '../ai/solver';
 import { createRng, type Rng } from '../core/random';
 import type { GameState, Move } from '../core/types';
@@ -39,7 +39,12 @@ export interface EnginePlayOptions {
    * (o el nivell per defecte si no en té).
    */
   level?: DifficultyKey;
-  /** Ajusta la probabilitat d'error segons com va el jugador humà (rubber banding). */
+  /** Força contínua, amb preferència sobre level. */
+  rating?: number;
+  /**
+   * Ajusta el nivell segons com va el jugador humà (rubber banding): la
+   * probabilitat d'error i la proporció de torns amb reordenació.
+   */
   rubberBanding?: boolean;
   /** Substitueix paràmetres concrets del nivell (proves i comparatives). */
   overrides?: Partial<AiParams>;
@@ -124,8 +129,10 @@ export function createEngine(options: EngineOptions = {}): RemigiEngine {
       const playerIndex = playOptions.playerIndex ?? state.currentPlayer;
       // El nivell demanat es converteix en substitucions completes de
       // paràmetres: així la decisió passa pel mateix `decideAiMove` de sempre.
-      const overrides = playOptions.level
-        ? { ...difficultyByKey(playOptions.level), ...playOptions.overrides }
+      const overrides = playOptions.rating !== undefined
+        ? withOverrides(difficultyByRating(playOptions.rating), playOptions.overrides)
+        : playOptions.level
+        ? withOverrides(difficultyByKey(playOptions.level), playOptions.overrides)
         : playOptions.overrides;
       const stats = emptyStats();
 
@@ -141,7 +148,7 @@ export function createEngine(options: EngineOptions = {}): RemigiEngine {
       return {
         move,
         tilesPlayed: tilesPlayed(state, move),
-        level: effectiveLevel(state, playerIndex, playOptions.level, playOptions.overrides),
+        level: effectiveLevel(state, playerIndex, playOptions.level, overrides),
         thinkingTimeMs,
         engineVersion: ENGINE_VERSION,
         ...stats,

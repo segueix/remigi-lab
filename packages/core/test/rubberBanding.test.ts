@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { decideAiMove, rubberBandedMistakeRate } from '../src/ai/aiPlayer';
+import { decideAiMove, rubberBandedMistakeRate, rubberBandedRearrangeRate } from '../src/ai/aiPlayer';
 import type { GameState } from '../src/core/types';
 import { makeState, t } from './helpers';
 
@@ -54,5 +54,45 @@ describe('ajust de dificultat dins de la partida', () => {
     };
     expect(decideAiMove(withPlay, 1, rng).type).toBe('play');
     expect(decideAiMove(withPlay, 1, rng, { rubberBanding: true }).type).toBe('draw');
+  });
+});
+
+describe('ajust de la reordenació dins de la partida', () => {
+  it('si el jugador va endarrerit, el bot reordena menys sovint', () => {
+    expect(rubberBandedRearrangeRate(table(14, 12), 1, 1)).toBeCloseTo(0.5);
+  });
+
+  it('si el jugador va avançat, el bot reordena més sovint', () => {
+    expect(rubberBandedRearrangeRate(table(4, 5), 1, 0.2)).toBeCloseTo(0.45);
+  });
+
+  it('amb les mans igualades no canvia res', () => {
+    expect(rubberBandedRearrangeRate(table(8, 8), 1, 0.2)).toBeCloseTo(0.2);
+  });
+
+  it('es queda sempre entre 0 i 1', () => {
+    expect(rubberBandedRearrangeRate(table(14, 1), 1, 1)).toBe(0);
+    expect(rubberBandedRearrangeRate(table(1, 14), 1, 0.2)).toBe(1);
+  });
+
+  it('sense cap humà a la taula no s’aplica', () => {
+    const state = makeState({ racks: [[t('red', 1)], Array(12).fill(t('blue', 2))] });
+    expect(rubberBandedRearrangeRate(state, 1, 0.2)).toBe(0.2);
+  });
+
+  it('un expert amb l’humà molt endarrerit deixa de reordenar, i sense ajust no', () => {
+    // Només la reordenació troba jugada: partir l'escala per fer el grup de quatres.
+    const state = table(14, 2);
+    const expertNeedingRearrange: GameState = {
+      ...state,
+      board: [[1, 2, 3, 4, 5, 6, 7].map((value) => t('red', value))],
+      players: state.players.map((p, i) =>
+        i === 1 ? { ...p, aiLevel: 'expert', rack: [t('blue', 4), t('black', 4)] } : p,
+      ),
+      currentPlayer: 1,
+    };
+    const rng = () => 0.99;
+    expect(decideAiMove(expertNeedingRearrange, 1, rng).type).toBe('play');
+    expect(decideAiMove(expertNeedingRearrange, 1, rng, { rubberBanding: true }).type).toBe('draw');
   });
 });

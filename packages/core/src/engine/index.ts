@@ -50,6 +50,7 @@ export {
   DIFFICULTY_ORDER,
   DEFAULT_DIFFICULTY,
   difficultyByKey,
+  difficultyByRating,
 } from '../ai/difficulty';
 export type { DifficultyKey, AiParams } from '../ai/difficulty';
 

@@ -30,12 +30,12 @@ describe('catàleg de motors', () => {
     expect(ENGINE_CATALOG.filter((spec) => spec.role === 'champion')).toHaveLength(1);
   });
 
-  it('expert-v1 queda congelat com a línia de base: 120k nodes i cap rol', () => {
+  it('expert-v1 és la línia de base (Expert de producció): 120k nodes i cap rol', () => {
     const baseline = engineSpecById('expert-v1');
     expect(baseline.role).toBeUndefined();
     expect(baseline.config.maxNodes).toBe(120_000);
-    // El nivell expert per defecte juga ara a 500k: la referència es pinta
-    // explícitament a 120k perquè el seu comportament no es mogui mai.
+    // El nivell expert és el de producció (sostre per defecte, 120k); els
+    // motors del catàleg declaren el seu sostre explícitament.
     expect(resolveEngineParams(baseline).maxNodes).toBe(120_000);
     expect(resolveEngineParams(engineSpecById('expert-v2')).maxNodes).toBe(500_000);
   });
