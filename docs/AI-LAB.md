@@ -261,6 +261,96 @@ torneig»), al CLI i a l'informe: totes tres surten de `comparisonRows`.
 
 N'hi ha un de mostra al repositori: [`AI_REPORT.md`](../AI_REPORT.md).
 
+## Tornejos grans: shards, fusió i l'acció de GitHub
+
+Un torneig de 1.000 partides distingeix poc: amb 1.000 partides l'error és de
+±3 punts de quota, i un 55,7% és diferència però un 50,8% és soroll (el
+Challenger 1M). Per veure millores petites calen desenes de milers de partides
+(±0,3 punts amb 30.000; ±0,15 amb 100.000), i això són hores de càlcul d'un sol
+procés. Per això el torneig es pot **repartir**.
+
+### Com funciona
+
+Les llavors i els seients surten només de l'**índex de partida**, així que un
+trosset del torneig (un *shard*) és simplement un rang d'índexs `[start, end)`.
+Amb llavors aparellades el repartiment és per parells (cada repartiment es juga
+des dels dos seients dins del mateix shard). Cada shard desa un fitxer JSON amb
+els resums de les seves partides i un esbós compacte de les mostres per decisió
+(p95 de temps, nodes): amb 100.000 partides n'hi ha milions i no cabrien.
+
+La fusió **comprova** que tots els fitxers són del mateix torneig (motors,
+partides, llavor base, aparellament, versió del motor i definició del catàleg),
+que no falta ni es repeteix cap partida, i dona exactament el mateix resultat
+que jugar-ho d'una tirada: mateixes victòries, agregats, partides interessants i
+errors. Només varien els temps de rellotge (el p95 es refà de l'esbós, amb un
+error d'ordre 1/1.000; vegeu `test/labShard.test.ts`).
+
+```bash
+# Al teu ordinador: N processos locals i fusió automàtica
+npm run lab -- --engine-a expert-v2 --engine-b expert-v1 --games 20000 --workers 4 \
+  --json informe.json --report AI_REPORT.md
+
+# O a mà, per repartir-ho entre màquines:
+npm run lab -- --games 100000 --seed 7 --shard 3/20 --shard-out shard-3.json
+npm run lab -- --merge carpeta-de-shards/ --json informe.json --report AI_REPORT.md
+```
+
+`--merge` accepta fitxers o carpetes. Un shard amb partides amb error no atura
+res: l'error queda al shard i la fusió el llista (i surt amb codi 1).
+
+### L'acció «Torneig del laboratori»
+
+`.github/workflows/lab-torneig.yml`, a **Actions → Torneig del laboratori → Run
+workflow**. Entrades: motors A i B, nombre de partides, llavor base, **feines**
+(en paral·lel, màx. 256), **processos per feina** (2 a un executor privat, 4 a
+un de públic) i si les llavors són aparellades. Fa tres coses:
+
+1. **Valida i reparteix** (`prepara`): comprova les entrades (ids, enters,
+   que hi hagi prou partides per als shards i que cap procés passi de 8.000
+   partides, ~1,7 h) i en treu la matriu de feines.
+2. **Juga** (`shards`): cada feina executa `scripts/lab-job.sh`, que arrenca un
+   procés per shard i en deixa els fitxers com a artefacte.
+3. **Fusiona** (`fusiona`): descarrega tots els shards, executa `--merge` i
+   publica `informe.json`, `AI_REPORT.md` i el log com a artefacte (90 dies) i
+   l'informe a la pàgina de resum de l'execució.
+
+L'acció **no commiteja ni toca producció**: el resultat és un artefacte. Decidir
+si un Challenger passa a Campió continua sent manual.
+
+Dimensionament, amb els números mesurats (Expert 500k contra Expert 120k):
+~0,9 partides/s per procés quan en corren 4 a la vegada.
+
+| partides | feines × processos | ~temps de rellotge |
+|---:|---|---|
+| 20.000 (per defecte) | 10 × 2 | ~20 min |
+| 30.000 | 15 × 4 | ~10 min |
+| 100.000 | 20 × 4 | ~25 min |
+| 100.000 | 40 × 2 | ~25 min |
+
+(Un torneig amb Challenger 1M costa ~2× per partida.) El límit real és quantes
+feines deixa córrer a la vegada el pla de GitHub del repositori; les restants
+fan cua.
+
+### Com llegir el resultat: significació
+
+L'informe (JSON, Markdown, CLI i `AI_REPORT.md`) porta ara una secció de
+**significació estadística** (`lab/significance.ts`), perquè el marcador sol no
+diu si una diferència és real:
+
+- la quota de victòries d'A amb el seu **interval de confiança del 95%** (Wilson)
+  i la **mida de diferència que aquest torneig pot distingir**;
+- el contrast de signes sobre partides;
+- l'**anàlisi per llavors aparellades**: cada repartiment es juga des dels dos
+  seients, així que la sort de la mà s'anul·la dins del parell i el contrast és
+  molt més potent que comptar victòries (amb 240 partides, 130–110 no és
+  significatiu per partides però 14 llavors per A contra 4 per B sí que ho és per
+  parells). És el contrast que fa servir el veredicte quan hi ha ≥ 30 parells.
+
+«Significatiu» vol dir que no és soroll (α = 0,05), no que sigui gran: mira
+sempre la mida de la diferència. I un empat no demostra que els motors siguin
+iguals, només que el torneig no els distingeix. L'informe continua sent
+descriptiu: mai decideix una promoció.
+
 ## La sonda: una variant, arriba a fer res?
 
 Un torneig igualat té **dues** lectures possibles i el marcador sol no les
@@ -380,9 +470,9 @@ Cap canvi del laboratori no es porta a producció automàticament.
   separar i mesurar»).
 - Els motors externs per `factory` s'han d'afegir amb un import al codi (no hi
   ha càrrega dinàmica d'artefactes des de la interfície).
-- El torneig corre en un sol worker; per a desenes de milers de partides, el
-  CLI amb Node és més còmode (i el pas a GitHub Actions queda per més
-  endavant).
+- A la interfície, el torneig corre en un sol worker; per a desenes de milers de
+  partides, el CLI (`--workers`, `--shard`/`--merge`) i l'acció «Torneig del
+  laboratori» el reparteixen (vegeu «Tornejos grans»).
 - La partida visual guarda les taules de cada torn per inspeccionar-les;
   partides anòmalament llargues (centenars de torns) gasten memòria en
   proporció.

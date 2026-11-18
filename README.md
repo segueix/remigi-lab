@@ -61,7 +61,13 @@ npm run lab -- --list                       # catàleg de motors, al terminal
 npm run lab -- --games 100 --seed 42        # torneig per CLI
 npm run lab -- --games 1000 --json informe.json --report AI_REPORT.md
 npm run lab -- --match --seed 43 --first A  # una partida, torn a torn
+npm run lab -- --games 20000 --workers 4    # torneig gran, repartit en 4 processos
 ```
+
+Per a tornejos de desenes de milers de partides hi ha l'acció de GitHub
+**«Torneig del laboratori»**, que el reparteix en shards en paral·lel, el fusiona
+i hi afegeix l'interval de confiança i el contrast per llavors aparellades
+(vegeu [`docs/AI-LAB.md`](docs/AI-LAB.md)).
 
 I la resta d'ordres del projecte:
 

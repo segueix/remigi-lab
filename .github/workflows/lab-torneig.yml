@@ -1,0 +1,183 @@
+name: Torneig del laboratori
+
+# Torneig Motor A vs Motor B de moltes partides, repartit entre feines en
+# paral·lel (shards) i fusionat en un sol informe. Es llança a mà des de
+# Actions → «Torneig del laboratori» → Run workflow. No toca cap fitxer del
+# repositori ni de producció: el resultat és un artefacte i el resum de la
+# feina; decidir què se'n fa és cosa de les persones (docs/AI-LAB.md).
+#
+# Cost aproximat: ~1,3 partides/s per procés amb Expert 500k contra Expert
+# 120k. Les 100.000 partides són ~21 h de càlcul: amb 20 feines de 4 processos
+# (un executor públic de 4 nuclis) en són ~20 minuts de rellotge.
+
+on:
+  workflow_dispatch:
+    inputs:
+      engine_a:
+        description: 'Motor A (id del catàleg; npm run lab -- --list)'
+        required: true
+        default: 'expert-v2'
+      engine_b:
+        description: 'Motor B (id del catàleg). Un challenger es mesura contra el Campió.'
+        required: true
+        default: 'expert-v1'
+      games:
+        description: 'Partides del torneig sencer (parell, si són aparellades)'
+        required: true
+        default: '20000'
+      seed:
+        description: 'Llavor base. Per confirmar un resultat, usa una llavor nova.'
+        required: true
+        default: '100000'
+      jobs:
+        description: 'Feines en paral·lel (màx. 256)'
+        required: true
+        default: '10'
+      procs:
+        description: 'Processos per feina (2 a un executor privat, 4 a un de públic)'
+        required: true
+        default: '2'
+      paired:
+        description: 'Llavors aparellades (cada llavor des dels dos seients)'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+# Un torneig a la vegada: els temps (p95) depenen de la càrrega de la màquina.
+concurrency:
+  group: lab-torneig
+  cancel-in-progress: false
+
+env:
+  # Els inputs arriben sempre per variables d'entorn, mai dins del codi del pas.
+  ENGINE_A: ${{ inputs.engine_a }}
+  ENGINE_B: ${{ inputs.engine_b }}
+  GAMES: ${{ inputs.games }}
+  SEED: ${{ inputs.seed }}
+  JOBS: ${{ inputs.jobs }}
+  PROCS: ${{ inputs.procs }}
+  PAIRED: ${{ inputs.paired }}
+
+jobs:
+  prepara:
+    name: Valida i reparteix
+    runs-on: ubuntu-latest
+    outputs:
+      feines: ${{ steps.matriu.outputs.feines }}
+      shards: ${{ steps.matriu.outputs.shards }}
+    steps:
+      - id: matriu
+        shell: bash
+        run: |
+          set -euo pipefail
+          err() { echo "::error::$1"; exit 1; }
+          [[ "$ENGINE_A" =~ ^[a-z0-9-]+$ ]] || err "Motor A no vàlid: «$ENGINE_A»"
+          [[ "$ENGINE_B" =~ ^[a-z0-9-]+$ ]] || err "Motor B no vàlid: «$ENGINE_B»"
+          for v in GAMES SEED JOBS PROCS; do
+            [[ "${!v}" =~ ^[0-9]+$ ]] || err "$v ha de ser un enter positiu"
+          done
+          (( GAMES >= 2 )) || err "Calen com a mínim 2 partides"
+          (( JOBS >= 1 && JOBS <= 256 )) || err "Les feines han de ser entre 1 i 256"
+          (( PROCS >= 1 && PROCS <= 16 )) || err "Els processos per feina han de ser entre 1 i 16"
+          units=$GAMES; [ "$PAIRED" = "true" ] && units=$(( (GAMES + 1) / 2 ))
+          shards=$(( JOBS * PROCS ))
+          (( shards <= units )) || err "$shards shards són massa per a $GAMES partides (màxim $units)"
+          # Guarda de temps: una feina té un límit de 6 h; a ~1,3 partides/s per
+          # procés, 8.000 partides per procés són ~1,7 h, de sobres.
+          per_proc=$(( (GAMES + shards - 1) / shards ))
+          (( per_proc <= 8000 )) || err "$per_proc partides per procés és massa: puja les feines o els processos"
+          echo "feines=$(seq -s, 1 "$JOBS" | sed 's/^/[/;s/$/]/')" >> "$GITHUB_OUTPUT"
+          echo "shards=$shards" >> "$GITHUB_OUTPUT"
+          echo "### Pla" >> "$GITHUB_STEP_SUMMARY"
+          echo "- \`$ENGINE_A\` (A) contra \`$ENGINE_B\` (B), $GAMES partides, llavor base $SEED, aparellades: $PAIRED" >> "$GITHUB_STEP_SUMMARY"
+          echo "- $JOBS feines × $PROCS processos = $shards shards de ~$per_proc partides" >> "$GITHUB_STEP_SUMMARY"
+
+  shards:
+    name: Feina ${{ matrix.feina }}
+    needs: prepara
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    strategy:
+      # Si una feina falla, el torneig no es pot fusionar: no cal gastar la resta.
+      fail-fast: true
+      matrix:
+        feina: ${{ fromJSON(needs.prepara.outputs.feines) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instal·la dependències
+        run: npm ci
+
+      - name: Juga els shards d'aquesta feina
+        env:
+          JOB: ${{ matrix.feina }}
+        run: ./scripts/lab-job.sh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: shards-${{ matrix.feina }}
+          path: shards/*.json
+          if-no-files-found: error
+          retention-days: 7
+
+  fusiona:
+    name: Fusiona i informa
+    needs: [prepara, shards]
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instal·la dependències
+        run: npm ci
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: shards-*
+          merge-multiple: true
+          path: shards
+
+      - name: Fusiona els shards
+        id: fusio
+        # Surt amb codi 1 si alguna partida ha acabat en error: l'informe s'ha
+        # de publicar igualment, i el pas final marca la feina com a fallida.
+        continue-on-error: true
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
+        run: |
+          set -o pipefail
+          npm run lab -- --merge shards --json informe.json --report AI_REPORT.md | tee fusio.log
+
+      - name: Resum a la pàgina de l'execució
+        if: always()
+        run: |
+          if [ -f AI_REPORT.md ]; then cat AI_REPORT.md >> "$GITHUB_STEP_SUMMARY"; fi
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: informe-${{ inputs.engine_a }}-vs-${{ inputs.engine_b }}
+          path: |
+            informe.json
+            AI_REPORT.md
+            fusio.log
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: Falla si hi ha hagut errors de partida
+        if: steps.fusio.outcome == 'failure'
+        run: |
+          echo "::error::La fusió ha acabat amb errors (partides amb error o shards incomplets): mira fusio.log"
+          exit 1

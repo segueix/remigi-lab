@@ -1,6 +1,7 @@
 import { engineSpecDiff, engineSpecById } from './catalog';
 import { HIEROGLYPH_THRESHOLD } from './hieroglyph';
 import { round } from './stats';
+import { SIGNIFICANCE_ALPHA, significance, type Significance } from './significance';
 import type {
   EngineAggregate,
   EngineSpecSummary,
@@ -34,13 +35,19 @@ export interface LabReport {
   durationMs: number;
   metricsA: EngineAggregate;
   metricsB: EngineAggregate;
+  /** Quant es pot fiar de la diferència: IC, contrast i anàlisi per parells. */
+  significance: Significance;
   interestingGames: InterestingGame[];
   errors: TournamentResult['errors'];
+  /** Si el torneig s'ha repartit entre processos: quants shards s'han fusionat. */
+  shards?: number;
 }
 
 export interface ReportOptions {
   /** Data de l'informe (per defecte, ara); es pot fixar per a tests. */
   generatedAt?: string;
+  /** Nombre de shards fusionats (només si n'hi ha més d'un). */
+  shards?: number;
 }
 
 export function buildReport(result: TournamentResult, options: ReportOptions = {}): LabReport {
@@ -59,14 +66,40 @@ export function buildReport(result: TournamentResult, options: ReportOptions = {
     durationMs: result.durationMs,
     metricsA: result.aggregates.A,
     metricsB: result.aggregates.B,
+    significance: significance(result.summaries),
     interestingGames: result.interesting,
     errors: result.errors,
+    ...(options.shards && options.shards > 1 ? { shards: options.shards } : {}),
   };
 }
 
 const percent = (value: number) => `${round(100 * value, 1)}%`;
 const ms = (value: number) => `${round(value, 1)} ms`;
 const num = (value: number, digits = 1) => String(round(value, digits));
+const pValueText = (p: number) => (p < 0.0001 ? 'p < 0,0001' : `p = ${String(round(p, 4)).replace('.', ',')}`);
+
+/** La secció de significació: el que el marcador sol no diu. */
+function significanceSection(report: LabReport): string {
+  const sig = report.significance;
+  const { engineA, engineB } = report;
+  const lines = [
+    `Sobre ${sig.decisiveGames} partides decisives, ${engineA.name} en guanya el **${percent(sig.winRateA)}** (interval de confiança del 95%: ${percent(sig.ci95[0])}–${percent(sig.ci95[1])}). Amb aquest nombre de partides la diferència més petita que es pot distingir del soroll és d'uns **±${round(100 * sig.marginOfError, 2)} punts** de quota.`,
+    `Contrast de signes sobre partides: ${pValueText(sig.pValue)}.`,
+  ];
+  if (sig.paired) {
+    lines.push(
+      `Anàlisi per llavors aparellades (${sig.paired.pairs} parells; cada repartiment jugat des dels dos seients, que anul·la la sort de la mà): ${engineA.name} guanya les dues partides de ${sig.paired.aBoth} llavors, ${engineB.name} de ${sig.paired.bBoth}, i es reparteixen ${sig.paired.split}. ${pValueText(sig.paired.pValue)}.`,
+    );
+  }
+  const basis = sig.basis === 'parells' ? 'l’anàlisi per parells' : 'el contrast de partides';
+  const who = sig.verdict === 'a-millor' ? engineA.name : engineB.name;
+  lines.push(
+    sig.verdict === 'sense-diferencia'
+      ? `**Sense diferència estadísticament significativa** (${basis}, α = ${SIGNIFICANCE_ALPHA}): el resultat és compatible amb el soroll; un empat aparent no demostra que els dos motors siguin iguals, només que aquest torneig no els distingeix.`
+      : `**Diferència estadísticament significativa a favor de ${who}** (${basis}, α = ${SIGNIFICANCE_ALPHA}). Significativa no vol dir gran: cal mirar també la mida de la diferència.`,
+  );
+  return lines.join('\n\n');
+}
 
 /** Ordre de reproducció d'una partida interessant, per enganxar al terminal. */
 function replayCommand(report: LabReport, game: InterestingGame): string {
@@ -154,7 +187,7 @@ export function reportToMarkdown(report: LabReport): string {
   const sections: string[] = [];
   sections.push(`# Informe del laboratori Remigi AI Lab
 
-Generat: ${report.generatedAt} · motor remigi-engine v${report.engineVersion} · ${report.games} partides (llavor base ${report.baseSeed}${report.paired ? ', llavors aparellades amb seients bescanviats' : ''}) · ${round(report.durationMs / 1000, 1)} s de càlcul.
+Generat: ${report.generatedAt} · motor remigi-engine v${report.engineVersion} · ${report.games} partides (llavor base ${report.baseSeed}${report.paired ? ', llavors aparellades amb seients bescanviats' : ''}) · ${round(report.durationMs / 1000, 1)} s de càlcul${report.shards ? ` (repartit en ${report.shards} shards)` : ''}.
 
 ## Motors comparats
 
@@ -212,6 +245,10 @@ ${report.errors
   )
   .join('\n')}`);
   }
+
+  sections.push(`## Significació estadística
+
+${significanceSection(report)}`);
 
   sections.push(`## Conclusió
 

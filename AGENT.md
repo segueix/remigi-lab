@@ -1827,6 +1827,46 @@ contra l'Expert 1.5.0** abans de promocionar res a producció.
 - [2026-11-18] `easy-v1` ara té `mistakeRate` 0,18 (producció l'ha
   reequilibrat; abans 0,2): s'ha ajustat el test del torneig.
 
+### Tornejos grans: shards, fusió, acció de GitHub i significació ✅ Feta (2026-11-18)
+
+**Per què**: amb 1.000 partides l'error és de ±3 punts: 557–443 és real però
+508–492 (Challenger 1M) és soroll, i les millores que queden són d'aquest ordre.
+Per detectar-les calen 10⁴–10⁵ partides (~21 h de càlcul d'un sol procés), i el
+laboratori no tenia manera de repartir-les ni de dir si una diferència és real.
+
+- [x] `TournamentConfig.range`: un torneig pot jugar només un rang d'índexs
+      (les llavors surten de l'índex absolut). `TournamentRun.shard()` en desa
+      el resultat fusionable; `shardRange` reparteix per parells de llavor.
+- [x] `mergeTournamentShards`: valida identitat del torneig (motors, partides,
+      llavor, aparellament, versió del motor, definició del catàleg) i cobertura
+      exacta (ni forats ni repetits); resultat **idèntic** al torneig d'una
+      tirada, tret dels temps. El p95 de temps es refà d'un esbós de quantils.
+- [x] CLI: `--shard i/n --shard-out`, `--merge <fitxers|carpetes>` i
+      `--workers N` (processos locals + fusió).
+- [x] Significació (`lab/significance.ts`): IC de Wilson, contrast de signes i
+      **anàlisi per llavors aparellades**; a l'informe JSON/Markdown i al CLI.
+- [x] Acció `.github/workflows/lab-torneig.yml` (`workflow_dispatch`): prepara
+      (valida i fa la matriu), shards en paral·lel (`scripts/lab-job.sh`), i
+      fusió amb informe com a artefacte i al resum. No commiteja ni toca producció.
+- [x] 26 tests nous (`test/labShard.test.ts`); `npm test` en verd.
+
+**Mesurat**: 240 partides `expert-v2` vs `expert-v1` (Expert 1.5.0) amb 4
+processos en 68 s (~3,5 partides/s). 130–110 (54,2%), 14 llavors per A contra 4
+per B: apunta que el 500k **sobreviu a la sincronització**, però amb 240
+partides és només un senyal; cal el torneig gran.
+
+### Problemes trobats
+
+- [2026-11-18] La mitjana de nodes i el p95 de temps necessiten mostres per
+  decisió, que no es poden fusionar ni cabrien en un fitxer (milions). Resolt
+  amb un esbós de ≤1.001 estadístics d'ordre per conjunt (exacte mentre hi
+  caben totes les mostres) més nombre i suma; la mitjana de nodes és exacta.
+- [2026-11-18] El pas `prepara` de l'acció s'ha provat en local amb entrades
+  bones i dolentes (injecció, enters, massa shards, massa partides per procés),
+  però **l'acció sencera no s'ha pogut executar des d'aquí**: la primera
+  execució real a GitHub és la prova definitiva (convé començar amb un torneig
+  petit: 200 partides, 2 feines × 2 processos).
+
 ### El registre antic de l'experiment 1M (substituït pel tancament de dalt)
 
 <details><summary>Registre original, abans dels resultats</summary>

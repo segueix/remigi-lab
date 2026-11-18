@@ -13,10 +13,20 @@
  *                                                # quantes jugades canvia de debò
  *                                                #  la variant respecte del Campió
  *
+ * Tornejos grans, repartits entre processos o màquines (vegeu docs/AI-LAB.md):
+ *   npm run lab -- --games 100000 --workers 4 --json informe.json
+ *                                                # 4 processos locals i fusió
+ *   npm run lab -- --games 100000 --shard 3/20 --shard-out shard-3.json
+ *                                                # només el tros 3 de 20
+ *   npm run lab -- --merge shards/ --json informe.json --report AI_REPORT.md
+ *                                                # fusiona els trossos (fitxers o carpetes)
+ *
  * Les partides interessants del torneig s'imprimeixen amb l'ordre exacta per
  * reproduir-les. Sortida amb codi 1 si alguna partida acaba en error.
  */
-import { writeFileSync } from 'node:fs';
+import { spawn } from 'node:child_process';
+import { mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { isAbsolute, join } from 'node:path';
 import { ENGINE_VERSION } from '../engine';
 import {
@@ -25,15 +35,21 @@ import {
   buildReport,
   comparisonRows,
   createMatch,
+  createTournament,
   describeProbe,
   engineSpecById,
   engineSpecDiff,
   probeTieBreak,
+  mergeTournamentShards,
   reportToMarkdown,
   round,
   runTournament,
+  shardRange,
+  SHARD_SCHEMA,
   type LabTurn,
   type Seat,
+  type TournamentResult,
+  type TournamentShard,
 } from '../lab';
 
 function argValue(name: string): string | null {
@@ -151,12 +167,32 @@ function runProbe(variant: string, reference: string): void {
   }
 }
 
-function playTournament(engineA: string, engineB: string): void {
-  const games = argNumber('games', 20);
-  const baseSeed = argNumber('seed', 42);
-  const paired = !hasFlag('no-pair');
-  const quiet = hasFlag('quiet');
+function parseShardSpec(spec: string): { index: number; count: number } {
+  const match = /^(\d+)\/(\d+)$/.exec(spec);
+  const index = match ? Number(match[1]) : NaN;
+  const count = match ? Number(match[2]) : NaN;
+  if (!match || index < 1 || index > count) {
+    throw new Error(`--shard espera «i/n» amb 1 ≤ i ≤ n (per exemple 3/20), i s'ha donat «${spec}»`);
+  }
+  return { index: index - 1, count };
+}
 
+/** Escriu el progrés d'un torneig, ~10 línies en tot el torneig. */
+function progressPrinter(total: number, quiet: boolean) {
+  const step = Math.max(1, Math.floor(total / 10));
+  return (progress: { completed: number; total: number; winsA: number; winsB: number; errors: number; elapsedMs: number }) => {
+    if (quiet || (progress.completed % step !== 0 && progress.completed !== total)) return;
+    const eta =
+      progress.completed === 0
+        ? '?'
+        : round(((progress.total - progress.completed) * progress.elapsedMs) / progress.completed / 1000, 1);
+    console.log(
+      `  ${String(progress.completed).padStart(String(total).length)}/${total} · A ${progress.winsA} – ${progress.winsB} B${progress.errors ? ` · ${progress.errors} errors` : ''} · ${round(progress.elapsedMs / 1000, 1)} s (falten ~${eta} s)`,
+    );
+  };
+}
+
+function printHeader(engineA: string, engineB: string, games: number, baseSeed: number, paired: boolean): void {
   const specA = engineSpecById(engineA);
   const specB = engineSpecById(engineB);
   console.log(`Torneig: A=${specA.name} (${engineA}) vs B=${specB.name} (${engineB})`);
@@ -169,25 +205,29 @@ function playTournament(engineA: string, engineB: string): void {
     for (const diff of differences) console.log(`  ${diff.key}:  A ${diff.a} · B ${diff.b}`);
     console.log('');
   }
+}
 
-  const step = Math.max(1, Math.floor(games / 10));
-  const result = runTournament({ engineA, engineB, games, baseSeed, paired }, (progress) => {
-    if (quiet || (progress.completed % step !== 0 && progress.completed !== games)) return;
-    const eta =
-      progress.completed === 0
-        ? '?'
-        : round(((progress.total - progress.completed) * progress.elapsedMs) / progress.completed / 1000, 1);
-    console.log(
-      `  ${String(progress.completed).padStart(String(games).length)}/${games} · A ${progress.winsA} – ${progress.winsB} B${progress.errors ? ` · ${progress.errors} errors` : ''} · ${round(progress.elapsedMs / 1000, 1)} s (falten ~${eta} s)`,
-    );
-  });
-
+/** Taula, partides interessants, errors i informes d'un torneig acabat (o fusionat). */
+function printResult(result: TournamentResult, shards?: number): void {
+  const { engineA, engineB } = result.config;
+  const specA = engineSpecById(engineA);
+  const specB = engineSpecById(engineB);
   console.log(`\n| Mètrica | ${specA.name} (A) | ${specB.name} (B) |`);
   console.log('|---|---:|---:|');
   for (const row of comparisonRows(result.aggregates.A, result.aggregates.B)) {
     console.log(`| ${row.label} | ${row.a} | ${row.b} |`);
   }
-  console.log(`\nMitjana de torns: ${round(result.turnsMean, 1)} · durada ${round(result.durationMs / 1000, 1)} s`);
+  console.log(`\nMitjana de torns: ${round(result.turnsMean, 1)} · durada ${round(result.durationMs / 1000, 1)} s${shards ? ' de càlcul acumulat' : ''}`);
+
+  const report = buildReport(result, { shards });
+  const sig = report.significance;
+  console.log(
+    `\nA guanya el ${round(100 * sig.winRateA, 2)}% de ${sig.decisiveGames} partides decisives (IC 95%: ${round(100 * sig.ci95[0], 2)}–${round(100 * sig.ci95[1], 2)}%; ±${round(100 * sig.marginOfError, 2)} punts) · ${
+      sig.verdict === 'sense-diferencia'
+        ? 'SENSE diferència significativa'
+        : `diferència significativa a favor de ${sig.verdict === 'a-millor' ? 'A' : 'B'}`
+    } (${sig.basis}${sig.paired ? `: ${sig.paired.aBoth} llavors per A, ${sig.paired.bBoth} per B, ${sig.paired.split} repartides` : ''})`,
+  );
 
   if (result.interesting.length > 0) {
     console.log('\nPartides interessants (reproduïbles per llavor):');
@@ -206,7 +246,6 @@ function playTournament(engineA: string, engineB: string): void {
     process.exitCode = 1;
   }
 
-  const report = buildReport(result);
   const jsonPath = argValue('json');
   if (jsonPath) {
     writeFileSync(outputPath(jsonPath), JSON.stringify(report, null, 2) + '\n');
@@ -219,9 +258,147 @@ function playTournament(engineA: string, engineB: string): void {
   }
 }
 
-function main(): void {
+function playTournament(engineA: string, engineB: string): void {
+  const games = argNumber('games', 20);
+  const baseSeed = argNumber('seed', 42);
+  const paired = !hasFlag('no-pair');
+  printHeader(engineA, engineB, games, baseSeed, paired);
+  const result = runTournament(
+    { engineA, engineB, games, baseSeed, paired },
+    progressPrinter(games, hasFlag('quiet')),
+  );
+  printResult(result);
+}
+
+/** Juga només un tros del torneig i el desa en un fitxer fusionable. */
+function playShard(engineA: string, engineB: string): void {
+  const games = argNumber('games', 20);
+  const baseSeed = argNumber('seed', 42);
+  const paired = !hasFlag('no-pair');
+  const { index, count } = parseShardSpec(argValue('shard')!);
+  const out = argValue('shard-out');
+  if (!out) throw new Error('--shard necessita --shard-out <fitxer.json> per desar el tros');
+
+  const range = shardRange(games, paired, index, count);
+  console.log(
+    `Shard ${index + 1}/${count} del torneig A=${engineA} vs B=${engineB}: partides ${range.start + 1}–${range.end} de ${games} · llavor base ${baseSeed}${paired ? ' · aparellades' : ''}\n`,
+  );
+  const run = createTournament({ engineA, engineB, games, baseSeed, paired, range });
+  const print = progressPrinter(run.total, hasFlag('quiet'));
+  while (!run.done) {
+    run.runNext();
+    print(run.progress());
+  }
+  const shard = run.shard()!;
+  writeFileSync(outputPath(out), JSON.stringify(shard));
+  const errors = shard.summaries.filter((summary) => summary.error).length;
+  console.log(
+    `\nShard desat a ${outputPath(out)} (${shard.summaries.length} partides${errors ? `, ${errors} amb error` : ''}, ${round(shard.durationMs / 1000, 1)} s)`,
+  );
+}
+
+/** Els fitxers de shard d'una llista de camins (cada un, un fitxer o una carpeta). */
+function readShards(paths: string[]): TournamentShard[] {
+  const files = paths.flatMap((path) => {
+    const resolved = outputPath(path);
+    return statSync(resolved).isDirectory()
+      ? readdirSync(resolved)
+          .filter((name) => name.endsWith('.json'))
+          .sort()
+          .map((name) => join(resolved, name))
+      : [resolved];
+  });
+  const shards: TournamentShard[] = [];
+  for (const file of files) {
+    const data = JSON.parse(readFileSync(file, 'utf8')) as { schema?: string };
+    if (data.schema !== SHARD_SCHEMA) {
+      console.log(`  (s'ignora ${file}: no és un shard del laboratori)`);
+      continue;
+    }
+    shards.push(data as TournamentShard);
+  }
+  return shards;
+}
+
+function mergeShards(paths: string[]): void {
+  if (paths.length === 0) throw new Error('--merge necessita fitxers o carpetes de shards');
+  const shards = readShards(paths);
+  console.log(`Fusionant ${shards.length} shards…`);
+  const result = mergeTournamentShards(shards);
+  const { engineA, engineB, games, baseSeed, paired } = result.config;
+  console.log('');
+  printHeader(engineA, engineB, games, baseSeed, paired);
+  printResult(result, shards.length);
+}
+
+/**
+ * Reparteix el torneig entre N processos fills d'aquest mateix CLI (un shard
+ * cadascun), espera que acabin i en fusiona els fitxers. Mateix resultat que
+ * sense `--workers`, en una fracció del temps.
+ */
+async function playWithWorkers(engineA: string, engineB: string, workers: number): Promise<void> {
+  const games = argNumber('games', 20);
+  const baseSeed = argNumber('seed', 42);
+  const paired = !hasFlag('no-pair');
+  const units = Math.ceil(games / (paired ? 2 : 1));
+  const count = Math.min(workers, units);
+  printHeader(engineA, engineB, games, baseSeed, paired);
+  console.log(`Repartit en ${count} processos (un shard cadascun)…\n`);
+
+  const dir = mkdtempSync(join(tmpdir(), 'remigi-lab-shards-'));
+  const baseArgs = [
+    '--engine-a', engineA,
+    '--engine-b', engineB,
+    '--games', String(games),
+    '--seed', String(baseSeed),
+    ...(paired ? [] : ['--no-pair']),
+    '--quiet',
+  ];
+  try {
+    await Promise.all(
+      Array.from({ length: count }, (_, i) => {
+        const out = join(dir, `shard-${String(i + 1).padStart(4, '0')}.json`);
+        return new Promise<void>((resolve, reject) => {
+          const child = spawn(
+            process.execPath,
+            [...process.execArgv, process.argv[1], ...baseArgs, '--shard', `${i + 1}/${count}`, '--shard-out', out],
+            { stdio: ['ignore', 'ignore', 'inherit'] },
+          );
+          child.on('error', reject);
+          child.on('exit', (code) => {
+            if (code === 0) {
+              console.log(`  shard ${i + 1}/${count} acabat`);
+              resolve();
+            } else {
+              reject(new Error(`El shard ${i + 1}/${count} ha acabat amb codi ${code}`));
+            }
+          });
+        });
+      }),
+    );
+    const result = mergeTournamentShards(readShards([dir]));
+    printResult(result, count);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+/** Els valors que segueixen un flag fins al proper `--` (per a `--merge a b c`). */
+function argValues(name: string): string[] {
+  const index = process.argv.indexOf(`--${name}`);
+  if (index < 0) return [];
+  const values: string[] = [];
+  for (const value of process.argv.slice(index + 1)) {
+    if (value.startsWith('--')) break;
+    values.push(value);
+  }
+  return values;
+}
+
+async function main(): Promise<void> {
   console.log(`Remigi AI Lab (CLI) · motor v${ENGINE_VERSION}\n`);
   if (hasFlag('list')) return listEngines();
+  if (hasFlag('merge')) return mergeShards(argValues('merge'));
 
   const engineA = argValue('engine-a') ?? 'expert-v1';
   const engineB = argValue('engine-b') ?? 'challenger-30k';
@@ -231,7 +408,13 @@ function main(): void {
 
   if (hasFlag('match')) return playOneMatch(engineA, engineB);
   if (hasFlag('probe')) return runProbe(engineA, engineB);
+  if (hasFlag('shard')) return playShard(engineA, engineB);
+  const workers = argNumber('workers', 1);
+  if (workers > 1) return playWithWorkers(engineA, engineB, workers);
   return playTournament(engineA, engineB);
 }
 
-main();
+main().catch((error: unknown) => {
+  console.error(`\n✖ ${error instanceof Error ? error.message : String(error)}`);
+  process.exitCode = 1;
+});

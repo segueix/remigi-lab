@@ -9,3 +9,7 @@ test-results/
 playwright-report/
 blob-report/
 .playwright/
+
+# Sortida dels tornejos repartits (npm run lab -- --shard / lab-job.sh)
+shards/
+fusio.log
