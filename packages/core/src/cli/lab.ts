@@ -9,6 +9,9 @@
  *   npm run lab -- --games 100 --seed 42 --json informe.json --report AI_REPORT.md
  *   npm run lab -- --match --seed 7 --first B    # una partida, torn a torn
  *   npm run lab -- --no-pair                     # sense llavors aparellades
+ *   npm run lab -- --probe --engine-a challenger-punts --engine-b expert-v2 --games 100
+ *                                                # quantes jugades canvia de debò
+ *                                                #  la variant respecte del Campió
  *
  * Les partides interessants del torneig s'imprimeixen amb l'ordre exacta per
  * reproduir-les. Sortida amb codi 1 si alguna partida acaba en error.
@@ -22,8 +25,10 @@ import {
   buildReport,
   comparisonRows,
   createMatch,
+  describeProbe,
   engineSpecById,
   engineSpecDiff,
+  probeTieBreak,
   reportToMarkdown,
   round,
   runTournament,
@@ -118,6 +123,34 @@ function playOneMatch(engineA: string, engineB: string): void {
   console.log(`\nPer reproduir-la: npm run lab -- --match --engine-a ${engineA} --engine-b ${engineB} --seed ${seed} --first ${firstSeat}`);
 }
 
+/**
+ * La sonda del desempat: no diu qui guanya, diu **si la variant arriba a fer
+ * res**. Un torneig igualat pot voler dir que la hipòtesi és falsa o que
+ * s'activa massa poc; això ho distingeix.
+ */
+function runProbe(variant: string, reference: string): void {
+  const games = argNumber('games', 100);
+  const baseSeed = argNumber('seed', 42);
+  console.log(
+    `Sondejant ${games} partides (llavor base ${baseSeed}). Cada decisió de la variant es compara amb la que hauria pres ${reference} en la mateixa posició: costa el doble de càlcul.\n`,
+  );
+  const probe = probeTieBreak({ variant, reference, games, baseSeed });
+  console.log(describeProbe(probe));
+
+  console.log('');
+  if (probe.changed === 0) {
+    console.log('La variant NO canvia mai la jugada: davant d’aquest rival és el mateix motor.');
+  } else if (probe.changedRate < 0.05) {
+    console.log(
+      'La variant s’activa molt poc: un torneig igualat no vol dir que la idea sigui dolenta, sinó que gairebé mai no arriba a aplicar-se. Per moure el marcador caldria eixamplar-la.',
+    );
+  } else {
+    console.log(
+      'La variant s’activa sovint: si tot i això el torneig queda igualat, la idea sí que és neutra o dolenta i es pot descartar.',
+    );
+  }
+}
+
 function playTournament(engineA: string, engineB: string): void {
   const games = argNumber('games', 20);
   const baseSeed = argNumber('seed', 42);
@@ -197,6 +230,7 @@ function main(): void {
   engineSpecById(engineB);
 
   if (hasFlag('match')) return playOneMatch(engineA, engineB);
+  if (hasFlag('probe')) return runProbe(engineA, engineB);
   return playTournament(engineA, engineB);
 }
 
